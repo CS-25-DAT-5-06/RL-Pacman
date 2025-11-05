@@ -25,6 +25,7 @@ import time
 import os
 import traceback
 import sys
+import numpy as np
 
 #######################
 # Parts worth reading #
@@ -241,6 +242,14 @@ class Grid:
                 if self[x][y] == key:
                     list.append((x, y))
         return list
+    
+    def asNpArray(self):
+        result = np.empty(shape=(self.width,self.height),dtype=bool)
+        for x in range(self.width):
+            for y in range(self.height):
+                result[x][y] = self[x][y]
+        return result
+
 
     def packBits(self):
         """
