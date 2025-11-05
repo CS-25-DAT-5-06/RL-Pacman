@@ -10,6 +10,8 @@ import layout
 import ghostAgents as ga
 from game import Directions
 
+import stable_baselines3.common.env_checker as ec
+
 def count(list):
     i = 0
     for e in list:
@@ -47,12 +49,18 @@ class GymEnv(gym.Env):
         self.render_mode = render_mode
 
         max = np.array([self.layout.width-1,self.layout.height-1])
+
+        ghostsLow = np.zeros(shape=(self.layout.getNumGhosts()))
+        ghostsHigh = np.empty(shape=(self.layout.getNumGhosts()))
+
+        capsulesLow = np.zeros(shape = ())
         
         self.observation_space = gym.spaces.Dict({
             "agent": gym.spaces.Box(low = np.array([0,0]),high=max,shape=(2,),dtype=np.int64),
             "food": gym.spaces.Box(low = 0, high = 1, shape = (self.layout.width,self.layout.height), dtype=np.bool),
             "ghosts": gym.spaces.Box(low = np.array([[0,0]]),high=np.array([[self.layout.width - 1,self.layout.height - 1]]),shape=(self.layout.getNumGhosts(),2),dtype=np.int64),
-            "capsules": gym.spaces.Box(low = np.array([[-1,-1]]),high=np.array([[self.layout.width - 1,self.layout.height - 1]]),shape=(count(self.layout.capsules),2),dtype=np.int64)
+            "capsules": gym.spaces.Box(low = np.array([[-1,-1]]),high=np.array([[self.layout.width - 1,self.layout.height - 1]]),shape=(count(self.layout.capsules),2),dtype=np.int64),
+            "nextLegalMoves": gym.spaces.Box(low = -1, high=4,shape=(5,),dtype=np.int64)
         })
         
         
@@ -64,6 +72,13 @@ class GymEnv(gym.Env):
             2: Directions.NORTH,
             3: Directions.WEST,
             4: Directions.SOUTH,
+        }
+        self._direction_to_action = {
+            "Stop": 0,
+            "East": 1,
+            "North": 2,
+            "West": 3,
+            "South": 4,
         }
 
     def reset(self, seed=None, options=None):
@@ -104,12 +119,20 @@ class GymEnv(gym.Env):
 
 
         currState = self.game.state
+        obsLegalActions = np.empty(shape=(5,),dtype=np.int64)
+        legalActions = self.game.state.getLegalPacmanActions()
+        for i in range(0,4):
+            if(i < len(legalActions)):
+                obsLegalActions[i] = self._direction_to_action(legalActions[i])
+            else:
+                obsLegalActions[i] = -1
 
         observation = dict({
             "agent": np.array([currState.getPacmanPosition()[0],currState.getPacmanPosition()[1]]),
             "food":  currState.getFood().asNpArray(),
             "ghosts": tupleArrayToArrayArray(currState.getGhostPositions()),
-            "capsules": tupleArrayToArrayArray(currState.getCapsules())
+            "capsules": tupleArrayToArrayArray(currState.getCapsules()),
+            "nextLegalMoves": obsLegalActions
         })
         
         return observation, dict()
@@ -123,7 +146,6 @@ class GymEnv(gym.Env):
             if agentIndex != 0:
                 observation = self.game.state.deepCopy()
                 action = agent.getAction(observation)
-                print("here")
 
             self.game.moveHistory.append((agentIndex, action))
 
@@ -139,12 +161,19 @@ class GymEnv(gym.Env):
             terminated = False
         
         currState = self.game.state
+        legalActions = np.empty(shape=(5,),dtype=np.int64)
+        for e in self.game.state.getLegalPacmanActions():
+            np.append(legalActions,self._direction_to_action[e])
+
+        while(len(legalActions) < 5):
+            np.append(legalActions,-1)
 
         observation = dict({
             "agent": np.array([currState.getPacmanPosition()[0],currState.getPacmanPosition()[1]]),
             "food":  currState.getFood().asNpArray(),
             "ghosts": tupleArrayToArrayArray(currState.getGhostPositions()),
-            "capsules": tupleArrayToArrayArray(currState.getCapsules())
+            "capsules": tupleArrayToArrayArray(currState.getCapsules()),
+            "nextLegalMoves": legalActions
         })
         reward = 0
         
@@ -153,10 +182,10 @@ class GymEnv(gym.Env):
 
 if __name__ == '__main__':
     gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "render_mode": None})
-    env = gym.make("berkley-pacman", render_mode = "human")
+    env = gym.make("berkley-pacman", layoutName = "openClassic" ,render_mode = "human")
 
-    env.reset()
+    ec.check_env(env)
 
-    terminated = False
-    while terminated == False:
-        observation, reward, terminated, truncated, info = env.step(1)
+    observation,info = env.reset()
+
+
