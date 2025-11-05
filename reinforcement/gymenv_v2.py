@@ -115,13 +115,15 @@ class GymEnv(gym.Env):
         return observation, dict()
 
     def step(self, action):
+        
         action = self._action_to_direction[action]
         #for agent in self.game.agents:
-        for agentIndex in range(0, self.numAgents - 1):
+        for agentIndex in range(0, self.numAgents):
             agent = self.game.agents[agentIndex]
-            if(isinstance(agent,ga.GhostAgent)):
+            if agentIndex != 0:
                 observation = self.game.state.deepCopy()
                 action = agent.getAction(observation)
+                print("here")
 
             self.game.moveHistory.append((agentIndex, action))
 
