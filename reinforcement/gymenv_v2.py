@@ -18,16 +18,15 @@ def count(list):
         i += 1
     return i
 
-
+#Settings constants
 TIMEOUT = 30
 ZOOM = 1.0
 FRAME_TIME = 0.0
 GHOST_AGENT = "RandomGhost"
 CATCH_EXCEPTIONS = False
 HORIZON = -1
-
 PACMAN = "KeyboardAgent"
-GHOSTS = "RandomGhost"
+
 
 
 #REWARDS
@@ -49,31 +48,20 @@ def tupleArrayToArrayArray(list):
 class GymEnv(gym.Env):
     metadata = {"render_modes":["human"]}
 
+    #Initializes the environment
     def __init__(self, layoutName,render_mode = None):
+        #Load the specified layout
         self.layout = layout.getLayout(layoutName + ".lay")
         if(self.layout == None):
             raise Exception("The layout " + layoutName + " cannot be found")
         
         self.render_mode = render_mode
 
-        high = np.array([self.layout.width-1,self.layout.height-1])
-            
-            
-            
-        '''
-        self.observation_space = gym.spaces.Dict({
-            "agent": gym.spaces.Box(low = np.array([0,0]),high=max,shape=(2,),dtype=np.int64),
-            "food": gym.spaces.Box(low = 0, high = 1, shape = (self.layout.width,self.layout.height), dtype=np.bool),
-            "ghosts": gym.spaces.Box(low = ghostsLow,high=ghostsHigh,shape=(self.layout.getNumGhosts(),2),dtype=np.int64),
-            "capsules": gym.spaces.Box(low = capsulesLow,high=capsulesHigh,shape=(count(self.layout.capsules),2),dtype=np.int64),
-            "nextLegalMoves": gym.spaces.Box(low = -1, high=4,shape=(5,),dtype=np.int64)
-        })
-        '''
+        #The size of the capsules array
         self.shapeCapsules = 2*count(self.layout.capsules)
 
         self.observation_space = gym.spaces.Dict({
-            "agent": gym.spaces.Box(low = np.array([0,0]),high=high,shape=(2,),dtype=np.int64),
-            #"food": gym.spaces.Box(low = 0, high = 1, shape = (self.layout.width,self.layout.height), dtype=np.bool),
+            "agent": gym.spaces.Box(low = np.array([0,0]),high=np.array([self.layout.width-1,self.layout.height-1]),shape=(2,),dtype=np.int64),
             "food": gym.spaces.Box(low = 0, high = 1, shape = (self.layout.width*self.layout.height,),dtype=np.bool),
             "ghosts": gym.spaces.Box(low = 0,high = max(self.layout.width - 1,self.layout.height - 1),shape=(2*self.layout.numGhosts,) ,dtype=np.int64),
             "capsules": gym.spaces.Box(low = -1,high = max(self.layout.width - 1,self.layout.height - 1),shape=(self.shapeCapsules,), dtype=np.int64),
@@ -115,7 +103,7 @@ class GymEnv(gym.Env):
 
         pacman = pm.loadAgent(PACMAN, False)
         
-
+        
         if self.render_mode == None:
             self.beQuiet = True
             # Suppress output and graphics
@@ -139,8 +127,6 @@ class GymEnv(gym.Env):
         
         self.agentIndex = self.game.startingIndex
         self.numAgents = len(self.game.agents)
-        timestep = 0
-
 
         currState = self.game.state
         obsLegalActions = np.empty(shape=(5,),dtype=np.int64)
@@ -150,9 +136,6 @@ class GymEnv(gym.Env):
                 obsLegalActions[i] = self._direction_to_action[legalActions[i]]
             else:
                 obsLegalActions[i] = -1
-
-        
-
 
         observation = dict({
             "agent": np.array([currState.getPacmanPosition()[0],currState.getPacmanPosition()[1]]),
@@ -165,26 +148,29 @@ class GymEnv(gym.Env):
         return observation, dict()
 
     def step(self, action):
-        if self._inv_direction_to_action[action] not in self.game.state.getLegalPacmanActions():         
-            action = 0
 
-        #prevState = self.game.state
+        #Check if action is in illegal actions
+        if self._inv_direction_to_action[action] not in self.game.state.getLegalPacmanActions():         
+            action = 0 #STOP
+
+        #Used for calculating reward
         prevScore = self.game.state.getScore()
 
         action = self._action_to_direction[action]
-        #for agent in self.game.agents:
+        
+        #Iterates over all the agents (Pacman and ghosts)
         for agentIndex in range(0, self.numAgents):
             agent = self.game.agents[agentIndex]
+
+            #Only true for ghosts
             if agentIndex != 0:
                 observation = self.game.state.deepCopy()
                 action = agent.getAction(observation)
 
+            #Execute action
             self.game.moveHistory.append((agentIndex, action))
-
             self.game.state = self.game.state.generateSuccessor(agentIndex, action)
-
-            self.game.display.update(self.game.state.data)
-
+            self.game.display.update(self.game.state.data) #Updates visuals
             self.game.rules.process(self.game.state, self.game)
 
             if(self.game.gameOver):
@@ -194,15 +180,16 @@ class GymEnv(gym.Env):
         
         currState = self.game.state
 
+
         obsLegalActions = np.empty(shape=(5,),dtype=np.int64)
         legalActions = self.game.state.getLegalPacmanActions()
-        
         for i in range(0,5):
             if(i < len(legalActions)):
                 obsLegalActions[i] = self._direction_to_action[legalActions[i]]
             else:
-                obsLegalActions[i] = -1
+                obsLegalActions[i] = -1 #Pad with -1 to ensure correct size and that elements are within low and high
 
+        
         capsules = tupleArrayToArrayArray(currState.getGhostPositions()).flatten()
         while len(capsules) < self.shapeCapsules:
             np.append(capsules,-1)
@@ -214,7 +201,7 @@ class GymEnv(gym.Env):
             "capsules": capsules,
             "nextLegalMoves": obsLegalActions
         })
-        
+
         reward = self.game.state.getScore() - prevScore
 
         return observation, reward, terminated, False, dict()
@@ -226,15 +213,13 @@ if __name__ == '__main__':
     gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "render_mode": None})
     env = gym.make("berkley-pacman", layoutName = "originalClassic", render_mode = "human")
 
-    #model = A2C("MultiInputPolicy",env, verbose=1)
-    #model.learn(total_timesteps=10000)
+    model = A2C("MultiInputPolicy",env, verbose=1)
+    model.learn(total_timesteps=10000)
 
-    ec.check_env(env)
-
-    #vec_env = model.get_env()
-    #bs = vec_env.reset()
-    #for i in range(1000):
-    #    action, _state = model.predict(obs, deterministic=True)
-    #    obs, reward, done, info = vec_env.step(action)
+    vec_env = model.get_env()
+    bs = vec_env.reset()
+    for i in range(1000):
+        action, _state = model.predict(obs, deterministic=True)
+        obs, reward, done, info = vec_env.step(action)
 
 
