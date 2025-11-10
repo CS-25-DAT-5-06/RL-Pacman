@@ -21,7 +21,7 @@ def count(list):
 #Settings constants
 TIMEOUT = 30
 ZOOM = 1.0
-FRAME_TIME = 0.0
+FRAME_TIME = 0.001
 GHOST_AGENT = "RandomGhost"
 CATCH_EXCEPTIONS = False
 HORIZON = -1
@@ -211,15 +211,24 @@ class GymEnv(gym.Env):
 
 if __name__ == '__main__':
     gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "render_mode": None})
+    env = gym.make("berkley-pacman", layoutName = "originalClassic", render_mode = None) #Removed rendering during training
+    
+    #Training x amount of times (without rendering)
+    model = A2C("MultiInputPolicy",env, verbose=1)  
+    model.learn(total_timesteps=10000) 
+    model.save("trained_pacman") #Save last model, "trained pacman"
+    env.close() 
+
+    #Rendering last model after training is finished, showing "trained pacman"
     env = gym.make("berkley-pacman", layoutName = "originalClassic", render_mode = "human")
+    model = A2C.load("trained_pacman", env=env) #Change to whatever algorithm we are using 
 
-    model = A2C("MultiInputPolicy",env, verbose=1)
-    model.learn(total_timesteps=10000)
-
-    vec_env = model.get_env()
-    bs = vec_env.reset()
+    obs, info = env.reset()
     for i in range(1000):
         action, _state = model.predict(obs, deterministic=True)
-        obs, reward, done, info = vec_env.step(action)
-
+        action = int(action)  #SB3 returns action as np.array, have to convert to int so env.step() gets an int
+        obs, reward, terminated, truncated, info = env.step(action)
+        if terminated or truncated:
+            break
+    env.close()
 
