@@ -5,10 +5,9 @@ from util import *
 import layout
 from game import Directions
 import math
+import os
 
 from stable_baselines3 import A2C
-
-
 
 import stable_baselines3.common.env_checker as ec
 
@@ -26,8 +25,6 @@ GHOST_AGENT = "RandomGhost"
 CATCH_EXCEPTIONS = False
 HORIZON = -1
 PACMAN = "KeyboardAgent"
-
-
 
 #REWARDS
 REWARD_DEATH = -500
@@ -208,14 +205,23 @@ class GymEnv(gym.Env):
     
     def render(self):
         self.render_mode = "human"
+#TensorBoard stuff
+models_dir = "models/A2C"
+logdir = "logs"
+
+if not os.path.exists(models_dir):
+    os.makedirs(models_dir)
+
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
 
 if __name__ == '__main__':
     gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "render_mode": None})
     env = gym.make("berkley-pacman", layoutName = "originalClassic", render_mode = None) #Removed rendering during training
     
     #Training x amount of times (without rendering)
-    model = A2C("MultiInputPolicy",env, verbose=1)  
-    model.learn(total_timesteps=10000) 
+    model = A2C("MultiInputPolicy",env, verbose=1, tensorboard_log=logdir) #"python -m tensorboard.main --logdir=logs --port=6006"
+    model.learn(total_timesteps=1000, reset_num_timesteps=False, tb_log_name="A2C") 
     model.save("trained_pacman") #Save last model, "trained pacman"
     env.close() 
 
