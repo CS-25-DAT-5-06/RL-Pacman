@@ -4,7 +4,8 @@ import pacman as pm
 from util import *
 import layout
 from game import Directions
-import math
+from sb3_contrib import MaskablePPO
+from sb3_contrib.common.maskable.utils import get_action_masks
 
 from stable_baselines3 import A2C
 
@@ -209,23 +210,32 @@ class GymEnv(gym.Env):
     def render(self):
         self.render_mode = "human"
 
+    def action_masks(self):
+        mask = np.ones(5, dtype=bool)
+        legalActions = self.game.state.getLegalPacmanActions()
+        for i in range(0, 5):
+            if self._inv_direction_to_action[i] not in self.game.state.getLegalPacmanActions():
+                mask[i] = False
+        return mask
+        
+
 if __name__ == '__main__':
     gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "render_mode": None})
     env = gym.make("berkley-pacman", layoutName = "originalClassic", render_mode = None) #Removed rendering during training
-    
     #Training x amount of times (without rendering)
-    model = A2C("MultiInputPolicy",env, verbose=1)  
-    model.learn(total_timesteps=10000) 
+    model = MaskablePPO("MultiInputPolicy", env, verbose=1)  
+    model.learn(total_timesteps=100000) 
     model.save("trained_pacman") #Save last model, "trained pacman"
     env.close() 
 
     #Rendering last model after training is finished, showing "trained pacman"
     env = gym.make("berkley-pacman", layoutName = "originalClassic", render_mode = "human")
-    model = A2C.load("trained_pacman", env=env) #Change to whatever algorithm we are using 
+    model = MaskablePPO.load("trained_pacman", env=env) #Change to whatever algorithm we are using 
 
     obs, info = env.reset()
     for i in range(1000):
-        action, _state = model.predict(obs, deterministic=True)
+        action_masks = get_action_masks(env)
+        action, _state = model.predict(obs, action_masks = action_masks,deterministic=True)
         action = int(action)  #SB3 returns action as np.array, have to convert to int so env.step() gets an int
         obs, reward, terminated, truncated, info = env.step(action)
         if terminated or truncated:
