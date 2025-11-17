@@ -32,10 +32,10 @@ PACMAN = "KeyboardAgent"
 
 #REWARDS
 REWARD_DEATH = -500
-REWARD_CONSUME = 1
-REWARD_CAPSULE = 5
+REWARD_CONSUME = 10
+REWARD_CAPSULE = 50
 REWARD_WIN = 500
-REWARD_MOVE_EMPTY = -1
+REWARD_MOVE_EMPTY = -15
 
 #Takes an array of tuples and returns an array of arrays
 def tupleArrayToArrayArray(list):
@@ -61,12 +61,15 @@ class GymEnv(gym.Env):
         #The size of the capsules array
         self.shapeCapsules = 2*count(self.layout.capsules)
 
+        numGhosts = self.layout.numGhosts
+
         self.observation_space = gym.spaces.Dict({
             "agent": gym.spaces.Box(low = np.array([0,0]),high=np.array([self.layout.width-1,self.layout.height-1]),shape=(2,),dtype=np.int64),
             "food": gym.spaces.Box(low = 0, high = 1, shape = (self.layout.width*self.layout.height,),dtype=np.bool),
             "ghosts": gym.spaces.Box(low = 0,high = max(self.layout.width - 1,self.layout.height - 1),shape=(2*self.layout.numGhosts,) ,dtype=np.int64),
             "capsules": gym.spaces.Box(low = -1,high = max(self.layout.width - 1,self.layout.height - 1),shape=(self.shapeCapsules,), dtype=np.int64),
-            "nextLegalMoves": gym.spaces.Box(low = -1, high=4,shape=(5,),dtype=np.int64)
+            "nextLegalMoves": gym.spaces.Box(low = -1, high=4,shape=(5,),dtype=np.int64),
+            "scaredTimer": gym.spaces.Box(low = 0, high = pm.SCARED_TIME,shape=(self.layout.numGhosts,),dtype=np.int64)
         })
         
         self.action_space = gym.spaces.Discrete(5)
@@ -143,7 +146,8 @@ class GymEnv(gym.Env):
             "food":  currState.getFood().asNpArray().flatten(),
             "ghosts": tupleArrayToArrayArray(currState.getGhostPositions()).flatten(),
             "capsules": tupleArrayToArrayArray(currState.getCapsules()).flatten(),
-            "nextLegalMoves": obsLegalActions
+            "nextLegalMoves": obsLegalActions,
+            "scaredTimer": np.array([agentstate.scaredTimer for agentstate in currState.getGhostStates()])
         })
         
         return observation, dict()
@@ -200,7 +204,8 @@ class GymEnv(gym.Env):
             "food":  currState.getFood().asNpArray().flatten(),
             "ghosts": tupleArrayToArrayArray(currState.getGhostPositions()).flatten(),
             "capsules": capsules,
-            "nextLegalMoves": obsLegalActions
+            "nextLegalMoves": obsLegalActions,
+            "scaredTimer": np.array([agentstate.scaredTimer for agentstate in currState.getGhostStates()])
         })
 
         reward = self.game.state.getScore() - prevScore
