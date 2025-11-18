@@ -186,11 +186,13 @@ class GymEnv(gym.Env):
             else:
                 obsLegalActions[i] = -1 #Pad with -1 to ensure correct size and that elements are within low and high
 
-        
-        capsules = tupleArrayToArrayArray(currState.getGhostPositions()).flatten()
-        while len(capsules) < self.shapeCapsules:
-            np.append(capsules,-1)
+        # Bugfix: Changed from getGhostPositions() to getCapsules()       
+        capsules = tupleArrayToArrayArray(currState.getCapsules()).flatten()
 
+        # Bugfix: Replaced while loop with np.pad() which returns a new array
+        if len(capsules) < self.shapeCapsules:
+            capsules = np.pad(capsules, (0, self.shapeCapsules - len(capsules)), constant_values=-1)
+        
         observation = dict({
             "agent": np.array([currState.getPacmanPosition()[0],currState.getPacmanPosition()[1]]),
             "food":  currState.getFood().asNpArray().flatten(),
