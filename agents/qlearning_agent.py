@@ -40,7 +40,8 @@ class QLearningAgent:
 
         self.action_space_size = action_space_size
         self.alpha = learning_rate
-        self.gamma = epsilon
+        self.gamma = discount_factor
+        self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
 
@@ -49,4 +50,35 @@ class QLearningAgent:
 
         self.q_table = defaultdict(lambda: np.zeros(action_space_size))
 
+        # Stats for tracking:
+        self.episodes_trained = 0
+        self.total_steps = 0
 
+#Random thoughts about illigal actions:
+
+    def get_action(self, state, legal_actions=None, training=True):
+        """
+        Selects an using epsilon-greedy policy
+            state: Current state
+            legal_actions: List of legal action indices (None = all actions legal)
+            training: If True, use epsilon-greedy. If False, use greedy (for evaluation)
+        Returns:
+            action: integer action index
+        """
+
+        # During evaluation, always exploit:
+        if not training:
+            epsilon = 0.0
+        else:
+            epsilon = self.epsilon
+
+        # Epsilon-greedy action selection:
+        if np.random.random() < epsilon:    # Generates random number between 0 and 1, as epsilon decays, less random actions.
+            # Explore: Random action
+            if legal_actions is not None and len(legal_actions) > 0:
+                return np.random.choice(legal_actions)
+            else:
+                return np.random.randint(self.action_space_size)
+        else:
+            # Exploit: best action according to q-values
+            q_values = self.q_table[state]
