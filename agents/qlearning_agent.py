@@ -21,7 +21,7 @@ class QLearningAgent:
 
     def __init__(
         self,
-        action_space_size=5,
+        action_space_size=4,
         learning_rate=0.1,
         discount_factor=0.9,
         epsilon=1.0,
@@ -30,7 +30,7 @@ class QLearningAgent:
      ):
         """
         Initialize the Q-learning agent.    
-            action_space_size: Number of possible actions (5 for Pacman: STOP, E, N, W, S)
+            action_space_size: Number of possible actions (4 for Pacman: E, N, W, S) STOP REMOVED
             learning_rate: Learning rate (alpha) for Q-value updates
             discount_factor: Discount factor (gamma) for future rewards
             epsilon: Initial exploration rate for epsilon-greedy
@@ -56,14 +56,14 @@ class QLearningAgent:
 
 #Random thoughts about illigal actions:
 
-    def get_action(self, state, legal_actions=None, training=True):
+    def get_action(self, state, training=True):
         """
         Selects an using epsilon-greedy policy
             state: Current state
-            legal_actions: List of legal action indices (None = all actions legal)
+            GONE: legal_actions: List of legal action indices (None = all actions legal)
             training: If True, use epsilon-greedy. If False, use greedy (for evaluation)
         Returns:
-            action: integer action index
+            action: integer action index (0-3)
         """
 
         # During evaluation, always exploit:
@@ -75,10 +75,8 @@ class QLearningAgent:
         # Epsilon-greedy action selection:
         if np.random.random() < epsilon:    # Generates random number between 0 and 1, as epsilon decays, less random actions.
             # Explore: Random action
-            if legal_actions is not None and len(legal_actions) > 0:
-                return np.random.choice(legal_actions)
-            else:
-                return np.random.randint(self.action_space_size)
+            return np.random.randint(self.action_space_size) # Just a random action
         else:
             # Exploit: best action according to q-values
             q_values = self.q_table[state]
+            return np.argmax(q_values)
