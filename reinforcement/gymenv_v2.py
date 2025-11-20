@@ -28,6 +28,7 @@ CATCH_EXCEPTIONS = False
 HORIZON = -1
 PACMAN = "KeyboardAgent"
 
+RECORDING_PATH = "recordings/"
 
 #Takes an array of tuples and returns an array of arrays
 def tupleArrayToArrayArray(list):
@@ -42,8 +43,21 @@ class GymEnv(gym.Env):
     metadata = {"render_modes":["human"]}
 
     #Initializes the environment
-    def __init__(self, layoutName,config =  "../reward_configs/default.ini",render_mode = None):
+    def __init__(self, layoutName,record = False, record_above = None,config =  "../reward_configs/default.ini",render_mode = None):
         self.config = readConfig(config)
+        self.record = record
+        if record_above != None:
+            self.record_above = record_above
+        else:
+            self.record_above = 0
+        self.gameCount = 0
+
+        if record:
+            import time
+            dir_name = 'session-' + '-'.join([str(t) for t in time.localtime()[1:6]])
+            self.recordings_dir = RECORDING_PATH + "/" + dir_name
+            os.mkdir(self.recordings_dir)
+
 
         #Load the specified layout
         self.layout = layout.getLayout(layoutName + ".lay")
@@ -168,12 +182,23 @@ class GymEnv(gym.Env):
             self.game.display.update(self.game.state.data) #Updates visuals
             self.game.rules.process(self.game.state, self.game)
 
+           
             if(self.game.gameOver):
                 terminated = True
+                self.gameCount += 1     
+                if self.record:
+                    if(self.gameCount >= self.record_above):
+                        import pickle
+                        fname = self.recordings_dir + ('/recorded-game-%d' % self.gameCount)
+                        f = open(fname, 'wb')
+                        components = {'layout': self.layout, 'actions': self.game.moveHistory}
+                        pickle.dump(components, f)
+                        f.close()
                 break
             terminated = False
         
         currState = self.game.state
+
 
 
         obsLegalActions = np.empty(shape=(5,),dtype=np.int64)
@@ -216,8 +241,8 @@ if not os.path.exists(logdir):
     os.makedirs(logdir)
 
 if __name__ == '__main__':
-    gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "config": "../reward_configs/default.ini", "render_mode": None})
-    env = gym.make("berkley-pacman", layoutName = "originalClassic", config = "../reward_configs/inverseDefault.ini", render_mode = None) #Removed rendering during training
+    gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "record": False, "record_above": None, "config": "../reward_configs/default.ini", "render_mode": None})
+    env = gym.make("berkley-pacman", layoutName = "originalClassic", record = True, record_above=1,config = "../reward_configs/inverseDefault.ini", render_mode = None) #Removed rendering during training
     
     #Training x amount of times (without rendering)
     model = A2C("MultiInputPolicy",env, verbose=1, tensorboard_log=logdir) #"python -m tensorboard.main --logdir=logs --port=6006"
