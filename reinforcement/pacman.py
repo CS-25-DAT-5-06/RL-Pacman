@@ -58,6 +58,7 @@ import os
 ###################################################
 
 
+
 class GameState:
     """
     A GameState specifies the full game state, including the food, capsules,
@@ -119,7 +120,10 @@ class GameState:
 
         # Time passes
         if agentIndex == 0:
-            state.data.scoreChange += -TIME_PENALTY  # Penalty for waiting around
+            if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+                state.data.scoreChange += -TIME_PENALTY  # Penalty for waiting around
+            else:
+                state.data.scoreChange += int(rewardConfig['REWARDS']['TIME_PENALTY'])
         else:
             GhostRules.decrementTimer(state.data.agentStates[agentIndex])
 
@@ -273,6 +277,7 @@ SCARED_TIME = 40    # Moves ghosts are scared
 COLLISION_TOLERANCE = 0.7  # How close ghosts must be to Pacman to kill
 TIME_PENALTY = 1  # Number of points lost each round
 
+rewardConfig = None
 
 class ClassicGameRules:
     """
@@ -283,7 +288,9 @@ class ClassicGameRules:
     def __init__(self, timeout=30):
         self.timeout = timeout
 
-    def newGame(self, layout, horizon, pacmanAgent, ghostAgents, display, quiet=False, catchExceptions=False):
+    def newGame(self, layout, horizon, pacmanAgent, ghostAgents, display, quiet=False, catchExceptions=False, config = None):
+        global rewardConfig
+        rewardConfig = config
         agents = [pacmanAgent] + ghostAgents[:layout.getNumGhosts()]
         initState = GameState()
         initState.initialize(layout, len(ghostAgents))
@@ -344,6 +351,8 @@ class PacmanRules:
     """
     PACMAN_SPEED = 1
 
+    CONFIG = None
+
     def getLegalActions(state):
         """
         Returns a list of possible actions.
@@ -378,14 +387,20 @@ class PacmanRules:
         x, y = position
         # Eat food
         if state.data.food[x][y]:
-            state.data.scoreChange += 10
+            if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+                state.data.scoreChange += 10
+            else:
+                state.data.scoreChange += int(rewardConfig['REWARDS']['EAT_FOOD'])
             state.data.food = state.data.food.copy()
             state.data.food[x][y] = False
             state.data._foodEaten = position
             # TODO: cache numFood?
             numFood = state.getNumFood()
             if numFood == 0 and not state.data._lose:
-                state.data.scoreChange += 500
+                if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+                    state.data.scoreChange += 500
+                else:
+                    state.data.scoreChange += int(rewardConfig['REWARDS']['WIN'])     
                 state.data._win = True
         # Eat capsule
         if(position in state.getCapsules()):
@@ -402,6 +417,8 @@ class GhostRules:
     These functions dictate how ghosts interact with their environment.
     """
     GHOST_SPEED = 1.0
+
+    CONFIG = None
 
     def getLegalActions(state, ghostIndex):
         """
@@ -459,14 +476,20 @@ class GhostRules:
 
     def collide(state, ghostState, agentIndex):
         if ghostState.scaredTimer > 0:
-            state.data.scoreChange += 200
+            if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+                state.data.scoreChange += 200
+            else:
+                state.data.scoreChange += int(rewardConfig['REWARDS']['EAT_GHOST'])
             GhostRules.placeGhost(state, ghostState)
             ghostState.scaredTimer = 0
             # Added for first-person
             state.data._eaten[agentIndex] = True
         else:
             if not state.data._win:
-                state.data.scoreChange -= 500
+                if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+                    state.data.scoreChange -= 500
+                else:
+                    state.data.scoreChange += int(rewardConfig['REWARDS']['LOSE'])
                 state.data._lose = True
     collide = staticmethod(collide)
 
