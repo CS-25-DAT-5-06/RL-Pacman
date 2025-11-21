@@ -645,7 +645,7 @@ def readCommand(argv):
     if options.gameToReplay != None:
         print('Replaying recorded game %s.' % options.gameToReplay)
         import pickle
-        f = open(options.gameToReplay)
+        f = open(options.gameToReplay, 'rb')
         try:
             recorded = pickle.load(f)
         finally:
@@ -720,7 +720,7 @@ def runGames(layout, horizon, pacman, ghosts, display, numGames, record, numTrai
         if beQuiet:
                 # Suppress output and graphics
             import textDisplay
-            gameDisplay = textDisplay.NullGraphics()
+            gameDisplay = textDisplay.NullGraphiacs()
             rules.quiet = True
         else:
             gameDisplay = display
