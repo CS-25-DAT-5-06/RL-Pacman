@@ -84,6 +84,10 @@ class QLearningAgent:
             # Exploit: best action according to q-values
             q_values = self.q_table[state] #array of four numbers, q-value for each of the four actions
             return np.argmax(q_values) #returns index of highest q-value
+        """
+        Note: The argmax function is ´not random, will always pick the first
+        value, if q_values are equal. Exploration bias. Could be made better
+        """
 
     def update(self, state, action, reward, next_state, done):
         """
@@ -110,7 +114,6 @@ class QLearningAgent:
             # Temporal difference learning
             max_next_q = np.max(self.q_table[next_state])
             target_q = reward + self.gamma * max_next_q
-
         # Q-learning update
         new_q = current_q + self.alpha * (target_q - current_q)
         self.q_table[state][action] = new_q

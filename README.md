@@ -2,6 +2,54 @@
 
 A systematic exploration of reinforcement learning methods applied to the Berkeley Pac-Man framework
 
+
+## Project Structure
+
+
+pacman-qlearning/
+│
+├── README.md                          # Project overview
+├── requirements.txt                   # Python dependencies
+│
+├── berkeley_pacman/                   # Core Pacman game files
+│   ├── layouts/
+│   ├── game.py
+│   ├── ghostAgents.py
+│   ├── layout.py
+│   ├── pacman.py
+│   ├── graphicsDisplay.py
+│   ├── textDisplay.py
+│   └── ...
+│
+├── environments/                     # Gymnasium wrappers
+│   ├── __init__.py
+│   ├── gymenv_v2.py                  
+│   └── state_extractor.py            # State extraction module
+│
+├── agents/                            # RL agents
+│   ├── __init__.py
+│   └── qlearning_agent.py         
+│
+├── experiments/                      # Training scripts and configs
+│   ├── __init__.py
+│   ├── configs/                      # YAML configuration files
+│   ├── train_qlearning.py            # Main training scripts
+│   ├── evaluate.py                   # Evaluation scripts
+│   └── ...
+│
+├── results/                          # Training outputs (gitignored)
+│   ├── logs/                         # Training logs
+│   ├── models/                       # Saved Q-tables
+│   ├── plots/                        # Visualization plots
+│   └── metrics/                      # CSV/JSON metrics
+│
+└── docs/                             # Documentation
+    ├── NOTES.md                      # Running log of group observations
+    └── USER_MANUAL.md                # How to train agents
+    
+    
+
+
 ## Project Overview
 
 This project demonstrates the progression from classical tabular reinforcement learning to modern deep RL approaches. We use the Berkeley AI Pac-Man environment as our testbed.
