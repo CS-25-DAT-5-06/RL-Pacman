@@ -62,7 +62,7 @@ The project follows a layered architecture that separates concerns and enables m
 
 - **Berkeley Pac-Man Framework**: Core game mechanics and physics
 - **Gymnasium Wrapper**: Standardized RL interface following OpenAI Gym conventions
-- **RL Agents**: Tabular Q-learning implementation, with planned extensions to DQN, PPO, and A2C
+- **RL Agents**: Tabular Q-learning implementation
 - **Experimental Framework**: Training scripts and evaluation tools
 
 ## Current Status
