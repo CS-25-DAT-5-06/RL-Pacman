@@ -33,8 +33,9 @@ pacman-qlearning/
 ├── experiments/                      # Training scripts and configs
 │   ├── __init__.py
 │   ├── configs/                      # YAML configuration files
-│   ├── train_qlearning.py            # Main training script
-│   └── evaluate.py                   # Evaluation script
+│   ├── train_qlearning.py            # Main training scripts
+│   ├── evaluate.py                   # Evaluation scripts
+│   └── ...
 │
 ├── results/                          # Training outputs (gitignored)
 │   ├── logs/                         # Training logs
@@ -42,9 +43,10 @@ pacman-qlearning/
 │   ├── plots/                        # Visualization plots
 │   └── metrics/                      # CSV/JSON metrics
 │
-│
 └── docs/                             # Documentation
+    ├── NOTES.md                      # Running log of group observations
     └── USER_MANUAL.md                # How to train agents
+    
     
 
 
