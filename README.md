@@ -4,7 +4,7 @@ A systematic exploration of reinforcement learning methods applied to the Berkel
 
 
 ## Project Structure
-
+```
 
 pacman-qlearning/
 │
@@ -47,7 +47,7 @@ pacman-qlearning/
     ├── NOTES.md                      # Running log of group observations
     └── USER_MANUAL.md                # How to train agents
     
-    
+ ```   
 
 
 ## Project Overview
