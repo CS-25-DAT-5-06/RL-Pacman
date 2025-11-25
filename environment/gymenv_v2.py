@@ -1,13 +1,12 @@
 import numpy as np
 import gymnasium as gym
-import pacman as pm
-from util import *
-import layout
-from game import Directions
-import math
+from reinforcement import pacman as pm
+from reinforcement.util import *
+from reinforcement import layout
+from reinforcement.game import Directions
 import os
 
-from rewardConfig import readConfig
+from reinforcement.rewardConfig import readConfig
 
 from stable_baselines3 import A2C
 
@@ -43,13 +42,13 @@ class GymEnv(gym.Env):
     metadata = {"render_modes":["human"]}
 
     #Initializes the environment
-    def __init__(self, layoutName,record = False, record_above = None,config =  "../reward_configs/default.ini",render_mode = None):
+    def __init__(self, layoutName,record = False, record_interval = None,config =  "../reward_configs/default.ini",render_mode = None):
         self.config = readConfig(config)
         self.record = record
-        if record_above != None:
-            self.record_above = record_above
+        if record_interval != None:
+            self.record_interval = record_interval
         else:
-            self.record_above = 0
+            self.record_interval = 0
         self.gameCount = 0
 
         if record:
@@ -102,26 +101,27 @@ class GymEnv(gym.Env):
             4: "South"
         }
 
+        print(1)
+
     def reset(self, seed=None, options=None):
         #From runGames in pacman.py
         self.rules = pm.ClassicGameRules(TIMEOUT)
 
-        ghostType = pm.loadAgent(GHOST_AGENT,True)
+        ghostType = pm.moduleLoadAgent(GHOST_AGENT,True)
         ghosts = [ghostType(i+1) for i in range(self.layout.numGhosts)]
 
-
-        pacman = pm.loadAgent(PACMAN, False)
+        pacman = pm.moduleLoadAgent(PACMAN, False)
         
         
         if self.render_mode == None:
             self.beQuiet = True
             # Suppress output and graphics
-            import textDisplay
+            from ..reinforcement import textDisplay
             self.gameDisplay = textDisplay.NullGraphics()
             self.rules.quiet = True
         else:
             self.beQuiet = False
-            import graphicsDisplay
+            from ..reinforcement import graphicsDisplay
             display = graphicsDisplay.PacmanGraphics(
             ZOOM, frameTime=FRAME_TIME)
             self.gameDisplay = display
@@ -129,6 +129,7 @@ class GymEnv(gym.Env):
         self.game = self.rules.newGame(self.layout, HORIZON, pacman, ghosts,
                              self.gameDisplay, self.beQuiet, CATCH_EXCEPTIONS, config=self.config)
         
+        print(1)
         #FROM game.run in game.py
 
         self.game.display.initialize(self.game.state.data)
@@ -159,7 +160,7 @@ class GymEnv(gym.Env):
     def step(self, action):
 
         #Check if action is in illegal actions
-        if self._inv_direction_to_action[action] not in self.game.state.getLegalPacmanActions():         
+        if self._inv_direction_to_action[action] not in self.game.state.getLegalPacmanActions():          
             action = 0 #STOP
 
         #Used for calculating reward
@@ -187,7 +188,7 @@ class GymEnv(gym.Env):
                 terminated = True
                 self.gameCount += 1     
                 if self.record:
-                    if(self.gameCount >= self.record_above):
+                    if(self.gameCount % self.record_interval == 0):
                         import pickle
                         fname = self.recordings_dir + ('/recorded-game-%d' % self.gameCount)
                         f = open(fname, 'wb')
@@ -241,12 +242,13 @@ if not os.path.exists(logdir):
     os.makedirs(logdir)
 
 if __name__ == '__main__':
-    gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "record": False, "record_above": None, "config": "../reward_configs/default.ini", "render_mode": None})
-    env = gym.make("berkley-pacman", layoutName = "originalClassic", record = True, record_above=1,config = "../reward_configs/inverseDefault.ini", render_mode = None) #Removed rendering during training
+    print(1)
+    gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "record": False, "record_interval": None, "config": "../reward_configs/default.ini", "render_mode": None})
+    env = gym.make("berkley-pacman", layoutName = "originalClassic", record = True, record_interval=2,config = "../reward_configs/inverseDefault.ini", render_mode = None) #Removed rendering during training
     
     #Training x amount of times (without rendering)
     model = A2C("MultiInputPolicy",env, verbose=1, tensorboard_log=logdir) #"python -m tensorboard.main --logdir=logs --port=6006"
-    model.learn(total_timesteps=1000, reset_num_timesteps=False, tb_log_name="A2C") 
+    model.learn(total_timesteps=10000, reset_num_timesteps=False, tb_log_name="A2C") 
     model.save("trained_pacman") #Save last model, "trained pacman"
     env.close() 
 

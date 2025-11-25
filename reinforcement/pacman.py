@@ -39,19 +39,21 @@ code to run a game.  This file is divided into three sections:
 To play your first game, type 'python pacman.py' from the command line.
 The keys are 'a', 's', 'd', and 'w' to move (or arrow keys).  Have fun!
 """
-from game import GameStateData
-from game import Game
-from game import Directions
-from game import Actions
-from util import nearestPoint
-from util import manhattanDistance
-import util
-import layout
+from reinforcement.game import GameStateData
+from reinforcement.game import Game
+from reinforcement.game import Directions
+from reinforcement.game import Actions
+from reinforcement.util import nearestPoint
+from reinforcement.util import manhattanDistance
+import reinforcement.util as util
+import reinforcement.layout as layout
 import sys
 import types
 import time
 import random
 import os
+import importlib
+
 
 ###################################################
 # YOUR INTERFACE TO THE PACMAN WORLD: A GameState #
@@ -406,6 +408,8 @@ class PacmanRules:
         if(position in state.getCapsules()):
             state.data.capsules.remove(position)
             state.data._capsuleEaten = position
+            if rewardConfig == None or 'REWARDS' in rewardConfig.sections() and 'CAPSULE' in list(rewardConfig['REWARDS'].keys()):
+                state.data.scoreChange += int(rewardConfig['REWARDS']['CAPSULE'])
             # Reset all ghosts' scared timers
             for index in range(1, len(state.data.agentStates)):
                 state.data.agentStates[index].scaredTimer = SCARED_TIME
@@ -665,7 +669,6 @@ def loadAgent(pacman, nographics):
     else:
         pythonPathDirs = pythonPathStr.split(';')
     pythonPathDirs.append('.')
-
     for moduleDir in pythonPathDirs:
         if not os.path.isdir(moduleDir):
             continue
@@ -683,6 +686,29 @@ def loadAgent(pacman, nographics):
                 return getattr(module, pacman)
     raise Exception('The agent ' + pacman +
                     ' is not specified in any *Agents.py.')
+
+def moduleLoadAgent(pacman, nographics):
+    pythonPathStr = os.path.dirname(os.path.realpath(__file__))
+
+    modules = os.listdir(pythonPathStr)
+    agentModules =  [f for f in modules if f.endswith("gents.py")]
+    print(agentModules)
+    for modulename in agentModules:
+        try:
+            module = __import__("reinforcement." + f"{modulename}")
+            module = importlib
+            print(module)
+        except ImportError:
+            print("here!")
+            continue
+        if pacman in dir(module):
+                if nographics and modulename == 'keyboardAgents.py':
+                    raise Exception(
+                        'Using the keyboard requires graphics (not text display)')
+                return getattr(module, pacman)
+    raise Exception('The agent ' + pacman +
+                    ' is not specified in any *Agents.py.')
+        
 
 
 def replayGame(layout, actions, display):

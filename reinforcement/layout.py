@@ -12,8 +12,8 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from util import manhattanDistance
-from game import Grid
+from reinforcement.util import manhattanDistance
+from reinforcement.game import Grid
 import os
 import random
 from functools import reduce
@@ -139,11 +139,11 @@ class Layout:
 
 def getLayout(name, back=2):
     if name.endswith('.lay'):
-        layout = tryToLoad('layouts/' + name)
+        layout = tryToLoad('reinforcement/layouts/' + name)
         if layout == None:
             layout = tryToLoad(name)
     else:
-        layout = tryToLoad('layouts/' + name + '.lay')
+        layout = tryToLoad('reinforcement/layouts/' + name + '.lay')
         if layout == None:
             layout = tryToLoad(name + '.lay')
     if layout == None and back >= 0:
