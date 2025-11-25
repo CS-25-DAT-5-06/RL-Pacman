@@ -120,14 +120,25 @@ class StateAbstraction:
             ghosts: Array of ghost positions [[x1, y1], [x2,y2], ..]
             n: Numbner of closest ghost to track
             bucket_size: Size of distance bukets, default 3:
+
+        Returns:
+            Tuple of ghost features: direction, dist_bucket
         """
         if len(ghosts) == 0:
             # No ghosts, return dummy values
             return tuple([((0, 0), 3)] * n )
 
+        # Create list of ghosts, with distance to agent
+        ghost_dists = [(self._manhatten_distance(agent_pos, tuple(ghost)), ghost)
+                       for ghost in ghosts]
+        # Then sort ghosts by closest
+        ghost_dists.sort(key=lambda x: x[0])
+
 
 
     def _manhattan_distance(self, pos1, pos2):
-
+        """
+        Manhatten distance, you only move horizontally or vertically, does not account for walls etc.
+        """
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
     
