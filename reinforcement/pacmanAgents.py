@@ -12,11 +12,11 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from pacman import Directions
-from game import Agent
+from reinforcement.pacman import Directions
+from reinforcement.game import Agent
 import random
-import game
-import util
+import reinforcement.game as game
+import reinforcement.util as util
 
 
 class LeftTurnAgent(game.Agent):

@@ -12,9 +12,11 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from game import Directions, Agent, Actions
+from reinforcement.game import Directions, Agent, Actions
 
-import random,util,time
+import reinforcement.util as util
+
+import random,time
 
 class ValueEstimationAgent(Agent):
     """

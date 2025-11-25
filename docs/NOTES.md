@@ -12,3 +12,6 @@ Mangler:
 - Træning med state abstraction, kan træne på Classic layout?
 - Fjerne vores egne filer fra reinforcement folder
 - Omdøb reinforcement folder til berkeley pacman, se readme.md
+
+25/11 - Nikolaj
+For at køre filer skal man nu skrive "python -m <package>.<module>" et eksempel er  "python -m environement.gymenv_v2". Derudover skal alle import statements også indholde en reference til den pakke filen er i inklusiv filer i den folder den tilhører(er ikke helt sikker på at dette gælder men det fortæller min erfaring indtil videre i hvertfald)

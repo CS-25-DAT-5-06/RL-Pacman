@@ -12,13 +12,10 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from game import *
-from learningAgents import ReinforcementAgent
-from featureExtractors import *
-from backend import ReplayMemory
-
-import backend
-import gridworld
+from reinforcement.game import *
+from reinforcement.learningAgents import ReinforcementAgent
+from reinforcement.featureExtractors import *
+from reinforcement.backend import ReplayMemory
 
 
 import random,util,math

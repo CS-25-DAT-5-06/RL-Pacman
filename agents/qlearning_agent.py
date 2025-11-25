@@ -83,6 +83,7 @@ class QLearningAgent:
         else:
             # Exploit: best action according to q-values
             q_values = self.q_table[state] #array of four numbers, q-value for each of the four actions
+            
             return np.argmax(q_values) #returns index of highest q-value
         """
         Note: The argmax function is ´not random, will always pick the first
