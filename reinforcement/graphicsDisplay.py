@@ -12,10 +12,10 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from graphicsUtils import *
+from reinforcement.graphicsUtils import *
 import math
 import time
-from game import Directions
+from reinforcement.game import Directions
 
 ###########################
 #  GRAPHICS DISPLAY CODE  #

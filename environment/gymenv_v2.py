@@ -116,12 +116,12 @@ class GymEnv(gym.Env):
         if self.render_mode == None:
             self.beQuiet = True
             # Suppress output and graphics
-            from ..reinforcement import textDisplay
+            import reinforcement.textDisplay as textDisplay
             self.gameDisplay = textDisplay.NullGraphics()
             self.rules.quiet = True
         else:
             self.beQuiet = False
-            from ..reinforcement import graphicsDisplay
+            import reinforcement.graphicsDisplay as graphicsDisplay
             display = graphicsDisplay.PacmanGraphics(
             ZOOM, frameTime=FRAME_TIME)
             self.gameDisplay = display

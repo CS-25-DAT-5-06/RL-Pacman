@@ -12,12 +12,12 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from game import Agent
-from game import Actions
-from game import Directions
+from reinforcement.game import Agent
+from reinforcement.game import Actions
+from reinforcement.game import Directions
 import random
-from util import manhattanDistance
-import util
+from reinforcement.util import manhattanDistance
+import reinforcement.util as util
 
 
 class GhostAgent(Agent):

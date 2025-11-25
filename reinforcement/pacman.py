@@ -692,12 +692,9 @@ def moduleLoadAgent(pacman, nographics):
 
     modules = os.listdir(pythonPathStr)
     agentModules =  [f for f in modules if f.endswith("gents.py")]
-    print(agentModules)
-    for modulename in agentModules:
+    for modulename in agentModules:  
         try:
-            module = __import__("reinforcement." + f"{modulename}")
-            module = importlib
-            print(module)
+            module = importlib.import_module(f"reinforcement.{modulename.split('.')[0]}")
         except ImportError:
             print("here!")
             continue
