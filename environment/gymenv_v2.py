@@ -55,7 +55,7 @@ class GymEnv(gym.Env):
             import time
             dir_name = 'session-' + '-'.join([str(t) for t in time.localtime()[1:6]])
             self.recordings_dir = RECORDING_PATH + "/" + dir_name
-            os.mkdir(self.recordings_dir)
+            os.makedirs(self.recordings_dir)
 
 
         #Load the specified layout
