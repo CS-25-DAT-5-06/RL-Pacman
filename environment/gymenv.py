@@ -1,9 +1,9 @@
 import numpy as np
 import gymnasium as gym
-from berkley import pacman as pm
-from berkley.util import *
-from berkley import layout
-from berkley.game import Directions
+from berkeley_pacman import pacman as pm
+from berkeley_pacman.util import *
+from berkeley_pacman import layout
+from berkeley_pacman.game import Directions
 import os
 
 from tools.configReader import readConfig
@@ -42,7 +42,7 @@ class GymEnv(gym.Env):
     metadata = {"render_modes":["human"]}
 
     #Initializes the environment
-    def __init__(self, layoutName,record = False, record_interval = None,config =  "../reward_configs/default.ini",render_mode = None):
+    def __init__(self, layoutName,record = False, record_interval = None,config =  "/experiments/configurations/default.ini",render_mode = None):
         self.config = readConfig(config)
         self.record = record
         if record_interval != None:
@@ -114,12 +114,12 @@ class GymEnv(gym.Env):
         if self.render_mode == None:
             self.beQuiet = True
             # Suppress output and graphics
-            import berkley.textDisplay as textDisplay
+            import berkeley_pacman.textDisplay as textDisplay
             self.gameDisplay = textDisplay.NullGraphics()
             self.rules.quiet = True
         else:
             self.beQuiet = False
-            import berkley.graphicsDisplay as graphicsDisplay
+            import berkeley_pacman.graphicsDisplay as graphicsDisplay
             display = graphicsDisplay.PacmanGraphics(
             ZOOM, frameTime=FRAME_TIME)
             self.gameDisplay = display
@@ -241,7 +241,7 @@ if not os.path.exists(logdir):
 if __name__ == '__main__':
     print(1)
     gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "record": False, "record_interval": None, "config": "../reward_configs/default.ini", "render_mode": None})
-    env = gym.make("berkley-pacman", layoutName = "originalClassic", record = True, record_interval=2,config = "../reward_configs/inverseDefault.ini", render_mode = None) #Removed rendering during training
+    env = gym.make("berkley-pacman", layoutName = "originalClassic", record = True, record_interval=2,config = "/experiments/configurations/inverseDefault.ini", render_mode = None) #Removed rendering during training
     
     #Training x amount of times (without rendering)
     model = A2C("MultiInputPolicy",env, verbose=1, tensorboard_log=logdir) #"python -m tensorboard.main --logdir=logs --port=6006"
@@ -250,7 +250,7 @@ if __name__ == '__main__':
     env.close() 
 
     #Rendering last model after training is finished, showing "trained pacman"
-    env = gym.make("berkley-pacman", layoutName = "originalClassic", config = "../reward_configs/inverseDefault.ini", render_mode = "human")
+    env = gym.make("berkley-pacman", layoutName = "originalClassic", config = "/experiments/configurations/inverseDefault.ini", render_mode = "human")
     model = A2C.load("trained_pacman", env=env) #Change to whatever algorithm we are using 
 
     obs, info = env.reset()

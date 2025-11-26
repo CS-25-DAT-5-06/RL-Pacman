@@ -1,8 +1,8 @@
-import berkley.pacman as pm
+import berkeley_pacman.pacman as pm
 import sys
 import os
 import argparse
-import berkley.graphicsDisplay as graphicsDisplay
+import berkeley_pacman.graphicsDisplay as graphicsDisplay
 
 RECORDINGS_PATH = "data/recordings/"
 
@@ -21,8 +21,8 @@ def replayGame(file):
     fileDict['display'] = graphicsDisplay.PacmanGraphics(
     1.0, frameTime=0.1)
 
-    import berkley.pacmanAgents as pacmanAgents
-    import berkley.ghostAgents as ghostAgents
+    import berkeley_pacman.pacmanAgents as pacmanAgents
+    import berkeley_pacman.ghostAgents as ghostAgents
     rules = pm.ClassicGameRules()
     agents = [pacmanAgents.GreedyAgent()] + [ghostAgents.RandomGhost(i+1)
                                                 for i in range(fileDict["layout"].getNumGhosts())]
