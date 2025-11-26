@@ -87,7 +87,10 @@ class StateAbstraction:
         else:
             raise ValueError(f"Unknown feature_type: {self.feature_type}")
         
-    
+    # =================
+    # STATE EXTRACTORS:
+    # =================
+
     def _extract_simple_state(self, agent_pos, ghosts, food):
         """
         Simplest state representation - minimal features for small state space
@@ -106,10 +109,11 @@ class StateAbstraction:
 
 
 
-    """
-    Helper methods:
-    """
-
+        
+    # =================
+    # HELPER METHODS
+    # =================
+    
     def _get_closest_ghost_info(self, agent_pos, ghosts, n=2, bucket_size=3):
 
         """
@@ -124,16 +128,30 @@ class StateAbstraction:
         Returns:
             Tuple of ghost features: direction, dist_bucket
         """
-        if len(ghosts) == 0:
+        if len(ghosts) == 0:          
             # No ghosts, return dummy values
-            return tuple([((0, 0), 3)] * n )
+            dummy_ghost = ((0, 3), 3)
+            return tuple([dummy_ghost] * n)
+        
+        # Calculate distance for all ghosts and store positions
+        ghost_distances_and_positions = []
+        for ghost in ghosts:
+            distance = self._manhattan_distance(agent_pos, tuple(ghost))
+            ghost_distances_and_positions.append((distance, ghost))
 
-        # Create list of ghosts, with distance to agent
-        ghost_dists = [(self._manhatten_distance(agent_pos, tuple(ghost)), ghost)
-                       for ghost in ghosts]
-        # Then sort ghosts by closest
-        ghost_dists.sort(key=lambda x: x[0])
+        
+        # Sort by distance, closest ghost first
+        def extract_distance(distance_position_pair):
+            distance = distance_position_pair[0]
+            return distance
+    
+        ghost_distances_and_positions.sort(key=extract_distance)
 
+        # Extract features for the n closest ghosts
+        ghost_features = []
+        n_closest_ghosts = ghost_distances_and_positions[:n]
+
+        for distance, ghost p
 
 
     def _manhattan_distance(self, pos1, pos2):
