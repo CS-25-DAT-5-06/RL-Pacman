@@ -47,7 +47,7 @@ if __name__ == "__main__":
                 prog= "Replay Tool",
                 description='Tool for replaying sessions or games of Pac-Man',
                 )
-    parser.add_argument("session")
+    parser.add_argument("session", help="The name of the folder corresponding to the session that ")
     
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-g","--game", help="Specific number corresponding to a game in the session")
