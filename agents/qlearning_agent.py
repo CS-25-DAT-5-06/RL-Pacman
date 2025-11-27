@@ -84,7 +84,12 @@ class QLearningAgent:
             # Exploit: best action according to q-values
             q_values = self.q_table[state] #array of four numbers, q-value for each of the four actions
             
-            return np.argmax(q_values) #returns index of highest q-value
+            maximum = max(q_values)
+
+            #returns a random choice between the arguments with the indices storing maximum values 
+            return np.random.choice([x for x in range(0,len(q_values)) if q_values[x] == maximum]) 
+        
+            #return np.argmax(q_values) #returns index of highest q-value
         """
         Note: The argmax function is ´not random, will always pick the first
         value, if q_values are equal. Exploration bias. Could be made better
