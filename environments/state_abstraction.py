@@ -267,7 +267,7 @@ class StateAbstraction:
 
         # Check directions for food, in radius
         has_food_north = False
-        for y_coord in range(y +1, min(y + radius + 1, self.grid_width)):
+        for y_coord in range(y +1, min(y + radius + 1, self.grid_height)):
             if food[x, y_coord]:
                 has_food_north = True
                 break
@@ -290,7 +290,7 @@ class StateAbstraction:
                 has_food_west = True
                 break
 
-        return (has_food_north, has_food_east, has_food_north, has_food_west)
+        return (has_food_north, has_food_east, has_food_south, has_food_west)
 
 
 
