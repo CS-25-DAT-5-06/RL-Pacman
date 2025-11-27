@@ -32,20 +32,21 @@ pacman-qlearning/
 │
 ├── experiments/                      # Training scripts and configs
 │   ├── __init__.py
-│   ├── configs/                      # YAML configuration files
+│   ├── configs/                      # .ini configuration files
 │   ├── train_qlearning.py            # Main training scripts
 │   ├── evaluate.py                   # Evaluation scripts
 │   └── ...
 │
-├── results/                          # Training outputs (gitignored)
+├── data/                          # Training outputs (gitignored)
 │   ├── logs/                         # Training logs
 │   ├── models/                       # Saved Q-tables
 │   ├── plots/                        # Visualization plots
-│   └── metrics/                      # CSV/JSON metrics
+│   ├── metrics/                      # CSV/JSON metrics
+|   └── recordings/                   # Stores folders with session
 │
 └── docs/                             # Documentation
     ├── NOTES.md                      # Running log of group observations
-    └── USER_MANUAL.md                # How to train agents
+    └── USER_GUIDE.md                # How to train agents
     
  ```   
 
