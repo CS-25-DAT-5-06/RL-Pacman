@@ -244,7 +244,7 @@ if __name__ == '__main__':
     env = gym.make("berkley-pacman", layoutName = "originalClassic", record = True, record_interval=2,config = "/experiments/configurations/inverseDefault.ini", render_mode = None) #Removed rendering during training
     
     #Training x amount of times (without rendering)
-    model = A2C("MultiInputPolicy",env, verbose=1, tensorboard_log=logdir) #"python -m tensorboard.main --logdir=logs --port=6006"
+    model = A2C("MultiInputPolicy",env, verbose=1, tensorboard_log=logdir) #"python -m tensorboard.main --logdir=data/logs --port=6006"
     model.learn(total_timesteps=10000, reset_num_timesteps=False, tb_log_name="A2C") 
     model.save("trained_pacman") #Save last model, "trained pacman"
     env.close() 
