@@ -24,8 +24,8 @@ def build_graph_from_layout(layout):
             if (nx2, ny2) in G.nodes:
                 G.add_edge((x, y), (nx2, ny2))
 
-    visual_of_nodes_and_edges(G)
-    
+    visual_of_nodes_and_edges(G) #Could do this another place
+
     return G
 
 def debug_layout(layout_name: str = "originalClassic"):
@@ -47,10 +47,7 @@ def debug_layout(layout_name: str = "originalClassic"):
     return G
 
 def visual_of_nodes_and_edges(G):
-    #nx.draw_spring(G, with_labels=True)
-    pos = { (x,y): (x, -y) for (x,y) in G.nodes }  #-y flips vertically for nicer view
-    nx.draw(G, pos, with_labels=False, node_size=50)
-    plt.gca().set_aspect("equal")   #keep square proportions
+    nx.draw_spectral(G, with_labels=True)
     plt.show()
 
 if __name__ == "__main__":
