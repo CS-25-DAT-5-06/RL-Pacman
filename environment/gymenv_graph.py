@@ -41,6 +41,25 @@ class GraphEnv(ge.GymEnv):
 
 
         # TODO: Call the gym to nx graph conversion function and visualize it
+        G = self.gymGraphToNXGraph()
+        self.visual_of_nodes_and_edges(G)
+        #nx.draw(G, with_labels=True)
+        #plt.show()
+
+        
+
+        self.non_connected_nodes = []
+        for nodes in self.nodes:
+            node_id = self.convert_xy_coordinates_to_id(nodes[4], nodes[5])
+            for edges in self.edges:
+                if node_id != edges[0] and node_id != edges[1]:
+                    self.non_connected_nodes.append(nodes)
+
+        self.unhappy_nodes = 0
+        for nodes in self.non_connected_nodes:
+            self.unhappy_nodes += 1
+        print(self.unhappy_nodes)
+            
 
         # TODO: (Optional) Redefine the action space here for clarity
 
@@ -72,7 +91,7 @@ class GraphEnv(ge.GymEnv):
 
                     # If there is somebody to actually/potentially connect to
                     if walkable_nodes > 1:
-                        extension_for_edge_link_list, extension_for_edge_features_list = self.connectNodeToSurrounding(x, y, node_list)
+                        extension_for_edge_link_list, extension_for_edge_features_list = self.connectNewNodeToSurroundingNodes(x, y, node_list)
                         edge_link_list.extend(extension_for_edge_link_list)
                         edge_features_list.extend(extension_for_edge_features_list)
                     
@@ -107,7 +126,7 @@ class GraphEnv(ge.GymEnv):
 
 
 
-    def connectNodeToSurrounding(self, xCoordinate, yCoordinate, nodeList):
+    def connectNewNodeToSurroundingNodes(self, xCoordinate, yCoordinate, nodeList):
         running_edge_link_list = []
         running_edge_feature_list = []
 
@@ -146,7 +165,20 @@ class GraphEnv(ge.GymEnv):
         G = nx.MultiDiGraph()
 
         #Starting by adding nodes with their features. Generating labels from their x, y values.
+        for i, features in enumerate(self.nodes):
+            G.add_node(i, features=features, pos=(self.nodes[i][4], self.nodes[i][5]), label=f"{self.convert_xy_coordinates_to_id(self.nodes[i][4], self.nodes[i][5])}/({self.nodes[i][4]}, {self.nodes[i][5]})")
+        for i, (u, v) in enumerate(self.edges):
+            G.add_edge(u, v, action=self.edge_features[i][0], label=self._inv_direction_to_action[self.edge_features[i][0]])
 
+        return G
+
+
+    def visual_of_nodes_and_edges(self, G, show_labels=True):
+        pos = nx.get_node_attributes(G, "pos")  #-y rotates so it looks more like Pac-man game, but then the NetworkX graph isnt an accurate representation so keep it like it is
+        nx.draw(G, pos, with_labels=False, node_size=50) #Node size
+        nx.draw_networkx_labels(G, pos, font_size=10) #Label font size
+        plt.gca().set_aspect("equal") #keep equal square porpotions so it resembles pacman game
+        plt.show()
 
 
 # Gotta test the __init__ function of the GraphEnv class         
