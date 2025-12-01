@@ -1,8 +1,10 @@
 import sys
 import numpy as np
 import gymnasium as gym
+from gymnasium.spaces import Graph, Box
 from . import gymenv as ge
-
+import networkx as nx
+import matplotlib.pyplot as plt
 
 
 class GraphEnv(ge.GymEnv):
@@ -20,14 +22,32 @@ class GraphEnv(ge.GymEnv):
         #print(f"Edge Features:  {self.edge_features}")
 
         # TODO: Create the observation space as a gym graph (with gymnasium.spaces.Graph)
+        self.nodeFeatureDim = self.nodes.shape[1]
+        self.edgeFeatureDim = self.edge_features.shape[1]
 
+        self.observation_space = Graph(
+            node_space=Box(
+                low=-np.inf, high=np.inf,
+                shape=(self.nodeFeatureDim, ),
+                dtype=np.int64
+                ),
+            
+            edge_space=Box(
+                low=-np.inf, high=np.inf,
+                shape=(self.edgeFeatureDim, ),
+                dtype=np.int64
+            )
+        )
 
 
         # TODO: Call the gym to nx graph conversion function and visualize it
 
         # TODO: (Optional) Redefine the action space here for clarity
 
+        # TODO: Actually build the reset() function
 
+
+        # TODO: Actually build the step() function
 
 
     
@@ -122,8 +142,10 @@ class GraphEnv(ge.GymEnv):
     #endregion
 
     # TODO: Implement the gym to nx graph conversion function
-    def gymGraphToNXGraph(gymGraph):
-        pass
+    def gymGraphToNXGraph(self):
+        G = nx.MultiDiGraph()
+
+        #Starting by adding nodes with their features. Generating labels from their x, y values.
 
 
 
