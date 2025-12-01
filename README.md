@@ -21,7 +21,7 @@ pacman-qlearning/
 │   ├── textDisplay.py
 │   └── ...
 │
-├── environments/                     # Gymnasium wrappers
+├── environment/                      # Gymnasium wrappers and environment abstractions
 │   ├── __init__.py
 │   ├── gymenv_v2.py                  
 │   └── state_extractor.py            # State extraction module
