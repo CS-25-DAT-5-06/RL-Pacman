@@ -290,9 +290,23 @@ class ClassicGameRules:
     def __init__(self, timeout=30):
         self.timeout = timeout
 
-    def newGame(self, layout, horizon, pacmanAgent, ghostAgents, display, quiet=False, catchExceptions=False, config = None):
+    def newGame(self, layout, horizon, pacmanAgent, ghostAgents, display, quiet=False, catchExceptions=False, reward_config = None):
         global rewardConfig
-        rewardConfig = config
+        
+        if reward_config is None:
+            self.reward_config = {
+                'TIME_PENALTY': -1,
+                'EAT_FOOD': 10,
+                'EAT_GHOST': 200,
+                'WIN': 500,
+                'LOSE': -500,
+                'CAPSULE': 10
+            }
+        else:
+            self.reward_config = reward_config
+        
+        rewardConfig = self.reward_config
+        
         agents = [pacmanAgent] + ghostAgents[:layout.getNumGhosts()]
         initState = GameState()
         initState.initialize(layout, len(ghostAgents))
