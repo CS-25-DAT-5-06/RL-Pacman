@@ -56,6 +56,8 @@ class GraphGymEnv(GymEnv):
         self.node_list = sorted(self.graph.nodes())  #Make sure the matrix is sorted
         self.num_nodes = len(self.node_list) #Number of walkable tiles in total
 
+        #print(self.node_list, self.num_nodes)
+
         #Each node will contain: [pellet, capsule, ghost, pacman]
         self.num_features = 4
 
@@ -96,10 +98,10 @@ class GraphGymEnv(GymEnv):
 
         return obs, reward, terminated, truncated, info #Return graph-based observation instead of dict
 
-
 """
 #Test if works
 if __name__ == "__main__":
+    debug_layout("originalClassic")
     env = GraphGymEnv("originalClassic")
     model = PPO("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=5000)
