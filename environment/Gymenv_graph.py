@@ -8,14 +8,23 @@ from .gymenv import GymEnv
 
 from stable_baselines3 import PPO
 
-
+"""
+If config file changes use this
+#[REWARDS] 
+TIME_PENALTY = -1
+EAT_FOOD = 10
+EAT_GHOST = 200
+WIN = 500
+LOSE = -500
+CAPSULE = 0
+"""
 #Build static graph from layout
-def build_graph_from_layout(layout_obj):
+def _build_graph_from_layout(layout_obj):
     walls = layout_obj.walls
     width = layout_obj.width
     height = layout_obj.height
 
-    G = nx.Graph()
+    G = nx.DiGraph() #Only do DiGraph if you want edges pointing in direction of action
 
     #Add nodes for all non-wall tiles
     for x in range(width):
@@ -24,35 +33,36 @@ def build_graph_from_layout(layout_obj):
                 G.add_node((x, y))
 
     #Add edges to potentially 4 adjacent nodes (check up, down, left, write for non-wall nodes)
-    for (x, y) in list(G.nodes):
+    for node in list(G.nodes):
+        (x,y) = node
         for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
-            nx_, ny_ = x + dx, y + dy
-            if (nx_, ny_) in G.nodes:
-                G.add_edge((x, y), (nx_, ny_)) #Graph is undirected right now (maybe change later)
+            nx2, ny2 = x + dx, y + dy
+            if (nx2, ny2) in G.nodes:
+                G.add_edge((x,y), (nx2,ny2))
 
-    #visual_of_nodes_and_edges(G)
+    visual_of_nodes_and_edges(G)
 
     return G
 
 #Can visually show nodes and edges so it looks like pacman layout
-def visual_of_nodes_and_edges(G):
-    pos = { (x,y): (x, -y) for (x,y) in G.nodes }  #-y rotates so it looks more like Pac-man game
+def visual_of_nodes_and_edges(G, show_labels=True):
+    pos = { (x,y): (x, -y) for (x,y) in G.nodes }  #-y rotates so it looks more like Pac-man game, if this is changed it will rotate wrongly
     nx.draw(G, pos, with_labels=False, node_size=50) #Node size
     nx.draw_networkx_labels(G, pos, font_size=5) #Label font size
-    plt.gca().set_aspect("equal") #keep square proportions
+    plt.gca().set_aspect("equal") #keep equal square porpotions so it resembles pacman game
     plt.show()
 
 
 #We are wrapping GymEnv, but changing the observation so its a np.array with shape (294, 4) 
 class GraphGymEnv(GymEnv):
     def __init__(
-        self, layoutName, record=False, record_interval=None, config="/experiments/configurations/default.ini", render_mode=None,
-    ):
+        self, layoutName, record=False, record_interval=None, config="/experiments/configurations/default.ini", render_mode=None, #If config file changes, use rewards above
+        ):
         #Calls parent class constructor GymEnv
         super().__init__(layoutName=layoutName, record=record, record_interval=record_interval, config=config, render_mode=render_mode,) 
 
         
-        self.graph = build_graph_from_layout(self.layout) #The NetworkX graph built from the layout
+        self.graph = _build_graph_from_layout(self.layout) #The NetworkX graph built from the layout
         self.node_list = sorted(self.graph.nodes())  #Make sure the matrix is sorted
         self.num_nodes = len(self.node_list) #Number of walkable tiles in total
 
@@ -72,16 +82,16 @@ class GraphGymEnv(GymEnv):
         food_grid = state.getFood().asNpArray()       #bool [x][y]
         capsules = set(state.getCapsules())           #set[(x, y)]
         ghosts = set(state.getGhostPositions())       #set[(x, y)]
-        pacman_pos = state.getPacmanPosition()        #(x, y)
+        pacman_pos = state.getPacmanPosition()        #(x,y) (Double, check)
 
         feats = np.zeros((self.num_nodes, self.num_features), dtype=np.int8) #Create empty feature matrix of shape (num_nodes, num_features)
 
-        #Loop through every node, if something is present we put 1, otherwise 0
-        for i, (x, y) in enumerate(self.node_list):
-            feats[i, 0] = 1 if food_grid[x][y] else 0
-            feats[i, 1] = 1 if (x, y) in capsules else 0
-            feats[i, 2] = 1 if (x, y) in ghosts else 0
-            feats[i, 3] = 1 if (x, y) == pacman_pos else 0
+        #Loop through every node, if something is present we put 1, otherwise 0 should look something like [1, 0, 0, 0] or another combination of 1 or 0
+        for i,(x, y) in enumerate(self.node_list):
+            feats[i,0] = 1 if food_grid[x][y] else 0
+            feats[i,1] = 1 if (x, y) in capsules else 0
+            feats[i,2] = 1 if (x, y) in ghosts  else 0
+            feats[i,3] = 1 if (x, y) == pacman_pos else 0
 
         return feats
     
@@ -92,17 +102,16 @@ class GraphGymEnv(GymEnv):
         return obs, {} #Gym requires a return of "observation, info", so we just return empty dict
 
     def step(self, action):
-        _, reward, terminated, truncated, info = super().step(action) #We ignore base_obs, we want our own graph based-observation, but everything else from GymEnv.step()
+        _, reward, terminated, truncated, info = super().step(action) #We ignore base_obs, we want our own graph based-observation, but everything else from GymEnv.step(), should work
 
         obs = self.build_node_features() 
 
-        return obs, reward, terminated, truncated, info #Return graph-based observation instead of dict
+        return obs, reward, terminated, truncated, info #Return graph-based observation instead of dict (like gymenv.py)
 
-"""
+
 #Test if works
 if __name__ == "__main__":
-    debug_layout("originalClassic")
+    #debug_layout("originalClassic")
     env = GraphGymEnv("originalClassic")
-    model = PPO("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=5000)
-"""
+    #model = PPO("MlpPolicy", env, verbose=1)
+    #model.learn(total_timesteps=5000)
