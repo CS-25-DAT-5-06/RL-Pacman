@@ -11,10 +11,10 @@ Create a training script in experiments/train_.py to
 
 
 Gymnasium Wrapper (gymenv_v2)
-  ↓  
+  ->
 Q-Learning Agent (qlearning_agent.py)
-  ↓ 
-Training Script (experiments/train_qlearning.py)
+  ->
+Training Script (experiments/experiment_runner.py)
 """
 
 class QLearningAgent:
@@ -56,8 +56,7 @@ class QLearningAgent:
 
     
     """
-    Random thoughts about illigal actions:
-    Action STOP removed, illegal/legal actions removed
+    Action STOP not removed, illegal/legal actions removed
     """
 
     def get_action(self, state, training=True):
@@ -120,6 +119,7 @@ class QLearningAgent:
             # Temporal difference learning
             max_next_q = np.max(self.q_table[next_state])
             target_q = reward + self.gamma * max_next_q
+
         # Q-learning update
         new_q = current_q + self.alpha * (target_q - current_q)
         self.q_table[state][action] = new_q
@@ -132,3 +132,78 @@ class QLearningAgent:
         """
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
         self.episodes_trained += 1
+
+
+
+
+    def get_average_q_value(self):
+        """
+        Calculate average Q-value across all states and actions in Q-table
+        for tracking learning progress
+        
+        Returns:
+            float: Average Q-value, or 0.0 if Q-table is empty
+        """
+        if len(self.q_table) == 0:
+            return 0.0
+        
+        total_q = 0.0
+        total_entries = 0
+        
+        for state_q_values in self.q_table.values():
+            total_q += np.sum(state_q_values)
+            total_entries += len(state_q_values)
+        
+        return total_q / total_entries if total_entries > 0 else 0.0
+
+
+
+
+
+    def save(self, filepath):
+        """
+        Save Q-table and agent parameters to file
+        
+        Arguments:
+            filepath: Path where to save the agent (e.g., 'models/agent.pkl')
+        """
+        save_dict = {
+            'q_table': dict(self.q_table),  # Convert defaultdict to regular dict
+            'action_space_size': self.action_space_size,
+            'alpha': self.alpha,
+            'gamma': self.gamma,
+            'epsilon': self.epsilon,
+            'epsilon_decay': self.epsilon_decay,
+            'epsilon_min': self.epsilon_min,
+            'episodes_trained': self.episodes_trained,
+            'total_steps': self.total_steps
+        }
+        
+        with open(filepath, 'wb') as f:
+            pickle.dump(save_dict, f)
+
+
+
+    def load(self, filepath):
+        """
+        Load Q-table and agent parameters from file
+        
+        Arguments:
+            filepath: Path to saved agent file
+        """
+        with open(filepath, 'rb') as f:
+            save_dict = pickle.load(f)
+        
+        # Restore Q-table as defaultdict
+        self.q_table = defaultdict(lambda: np.zeros(self.action_space_size))
+        self.q_table.update(save_dict['q_table'])
+        
+        # Restore parameters
+        self.action_space_size = save_dict['action_space_size']
+        self.alpha = save_dict['alpha']
+        self.gamma = save_dict['gamma']
+        self.epsilon = save_dict['epsilon']
+        self.epsilon_decay = save_dict['epsilon_decay']
+        self.epsilon_min = save_dict['epsilon_min']
+        self.episodes_trained = save_dict['episodes_trained']
+        self.total_steps = save_dict['total_steps']

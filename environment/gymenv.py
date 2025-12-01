@@ -6,8 +6,6 @@ from berkeley_pacman import layout
 from berkeley_pacman.game import Directions
 import os
 
-from tools.configReader import readConfig
-
 from stable_baselines3 import A2C
 
 import stable_baselines3.common.env_checker as ec
@@ -42,9 +40,34 @@ class GymEnv(gym.Env):
     metadata = {"render_modes":["human"]}
 
     #Initializes the environment
-    def __init__(self, layoutName,record = False, record_interval = None,config =  "/experiments/configurations/default.ini",render_mode = None):
-        self.config = readConfig(config)
-        self.record = record
+    
+    def __init__(self, layoutName, record=False, record_interval=None, 
+                reward_config=None, render_mode=None):
+        """
+        Arguments:
+            layoutName: Name of the layout file (without .lay)
+            record: Whether to record games
+            record_interval: Record every N games
+            reward_config: Dict with reward values or None for defaults
+            render_mode: "human" for graphics, None for headless
+        """
+        # Handle reward configuration
+        if reward_config is None:
+            # Default rewards
+            self.reward_config = {
+                'TIME_PENALTY': -1,
+                'EAT_FOOD': 10,
+                'EAT_GHOST': 200,
+                'WIN': 500,
+                'LOSE': -500,
+                'CAPSULE': 10
+            }
+        else:
+            self.reward_config = reward_config
+
+        self.record = record 
+        
+
         if record_interval != None:
             self.record_interval = record_interval
         else:
@@ -125,8 +148,9 @@ class GymEnv(gym.Env):
             self.gameDisplay = display
             self.rules.quiet = False
         self.game = self.rules.newGame(self.layout, HORIZON, pacman, ghosts,
-                             self.gameDisplay, self.beQuiet, CATCH_EXCEPTIONS, config=self.config)
-        
+                            self.gameDisplay, self.beQuiet, CATCH_EXCEPTIONS, 
+                            reward_config=self.reward_config)
+
         #FROM game.run in game.py
 
         self.game.display.initialize(self.game.state.data)
@@ -238,11 +262,21 @@ if not os.path.exists(models_dir):
 if not os.path.exists(logdir):
     os.makedirs(logdir)
 
+
+"""
 if __name__ == '__main__':
     print(1)
+    custom_rewards = {
+        'TIME_PENALTY': -1,
+        'EAT_FOOD': 10,
+        'EAT_GHOST': 200,
+        'WIN': 500,
+        'LOSE': -500,
+        'CAPSULE': 10
+    }
+
     gym.register(id="berkley-pacman",entry_point=GymEnv,max_episode_steps=300,kwargs = {"layoutName": "openClassic", "record": False, "record_interval": None, "config": "../reward_configs/default.ini", "render_mode": None})
-    env = gym.make("berkley-pacman", layoutName = "originalClassic", record = True, record_interval=2,config = "/experiments/configurations/inverseDefault.ini", render_mode = None) #Removed rendering during training
-    
+    env = gym.make("berkley-pacman", layoutName="originalClassic", record=True, record_interval=2, reward_config=custom_rewards, render_mode=None)    
     #Training x amount of times (without rendering)
     model = A2C("MultiInputPolicy",env, verbose=1, tensorboard_log=logdir) #"python -m tensorboard.main --logdir=data/logs --port=6006"
     model.learn(total_timesteps=10000, reset_num_timesteps=False, tb_log_name="A2C") 
@@ -262,3 +296,4 @@ if __name__ == '__main__':
             break
     env.close()
 
+"""

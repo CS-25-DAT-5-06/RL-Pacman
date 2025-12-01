@@ -78,7 +78,10 @@ class StateAbstraction:
         ghosts = observation['ghosts'].reshape(-1,2) # Converts the flat array from gym dict to pairs: [x1,y1,x2,y2,...] to [[x1,y1], [x2,y2],...]
         food = observation['food'].reshape(self.grid_width, self.grid_height)
 
-        if self.feature_type == "simple":
+
+        if self.feature_type == "none":
+            return self._extract_raw_state(agent_pos, ghosts, food)
+        elif self.feature_type == "simple":
             return self._extract_simple_state(agent_pos, ghosts, food)
         elif self.feature_type == "medium":
             return self._extract_medium_state(agent_pos, ghosts, food, observation)
@@ -90,6 +93,28 @@ class StateAbstraction:
     # =================
     # STATE EXTRACTORS:
     # =================
+
+
+
+    def _extract_raw_state(self, agent_pos, ghosts, food):
+        """
+        No abstraction - full raw state representation
+        Features: exact positions of everything
+        """
+        x, y = agent_pos
+        
+        # Convert food grid to tuple of food positions (makes it hashable)
+        food_positions = tuple(
+            (i, j) for i in range(self.grid_width) 
+            for j in range(self.grid_height) 
+            if food[i, j]
+        )
+        
+        # Ghost positions as tuples
+        ghost_positions = tuple(tuple(ghost) for ghost in ghosts)
+        
+        state = (agent_pos, ghost_positions, food_positions)
+        return state
 
     def _extract_simple_state(self, agent_pos, ghosts, food):
         """

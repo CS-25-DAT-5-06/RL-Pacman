@@ -1,0 +1,46 @@
+# Q-Learning Experiment Configuration
+
+experiment_name: "qlearning_simple_smallGrid"
+
+# Environment Configuration
+environment:
+  layout: "smallGrid"  # Layout file name (without .lay extension)
+  
+  # Reward structure
+  rewards:
+    time_penalty: -1      # Penalty per timestep
+    eat_food: 10          # Reward for eating food pellet
+    eat_ghost: 200        # Reward for eating scared ghost
+    win: 500              # Reward for winning game
+    lose: -500            # Penalty for losing game
+    capsule: 10           # Reward for eating power capsule
+
+# Agent Hyperparameters
+agent:
+  learning_rate: 0.1      # Alpha: Q-learning step size
+  discount_factor: 0.99   # Gamma: future reward discount
+  epsilon: 1.0            # Initial exploration rate
+  epsilon_decay: 0.995    # Decay factor per episode
+  epsilon_min: 0.01       # Minimum exploration rate
+
+# State Abstraction
+state_abstraction:
+  enabled: true
+  feature_type: "simple"  # Options: "none", "simple", "medium", "rich"
+  # none: no abstraction, clean q-learning
+  # simple: minimal features, small state space
+  # medium: balanced features
+  # rich: maximum features, large state space
+
+# Training Configuration
+training:
+  num_episodes: 5000      # Total training episodes
+  eval_interval: 100      # Evaluate every N episodes (future feature)
+  eval_episodes: 10       # Episodes per evaluation (future feature)
+
+# Output Configuration
+output:
+  base_dir: "data/experiments"  # Base directory for results
+  save_q_table: true            # Save trained Q-table
+  save_metrics: true            # Save training metrics CSV
+  print_interval: 100           # Print progress every N episodes
