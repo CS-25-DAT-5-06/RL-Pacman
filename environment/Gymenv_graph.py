@@ -31,28 +31,37 @@ def _build_graph_from_layout(layout_obj):
         for y in range(height):
             if not walls[x][y]:
                 G.add_node((x, y))
-
+    
+    action_direction = {
+        (0,1): "North",
+        (1,0): "East",
+        (0,-1): "South",
+        (-1,0): "West",
+    }
+    
     #Add edges to potentially 4 adjacent nodes (check up, down, left, write for non-wall nodes)
     for node in list(G.nodes):
         (x,y) = node
-        for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
-            nx2, ny2 = x + dx, y + dy
-            if (nx2, ny2) in G.nodes:
-                G.add_edge((x,y), (nx2,ny2))
+        for x_direction, y_direction in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            adj_x_node, adj_y_node = x + x_direction, y + y_direction
 
+            if (adj_x_node, adj_y_node) in G.nodes:
+                G.add_edge((x,y), (adj_x_node,adj_y_node), action_direction =[(x_direction, y_direction)])
 
-    #print(list(G.edges(data=True))) #Prints EVERY edges
-    #print(list(G.edges(node, data=True))) #Can write a specific node to test
+            #Both these print functions print edges and the actions between those two edges, dont fully understand the difference between them, but they both print similar things
+            #DEBUG: print(list(G.edges((x,y), data=True))) prints all edges and the action_direction between those edges
+            #DEBUG: print(list(G.edges(data=True))) #Prints EVERY edges in whole graph
 
-    #visual_of_nodes_and_edges(G) #Visual of NetworkX graph, change to directed graph or something else by editing G variable above
+    #DEBUG: print(list(G.edges((6,6), data=True))) #Can write a specific node to test, if you print the visual NetworkX graph below you can find that specific node and see if the adjacency nodes and action direction is correct
+    #DEBUG: visual_of_nodes_and_edges(G)#Visual of NetworkX graph, change to directed graph or something else by editing G variable above
 
     return G
-
+    
 #Can visually show nodes and edges so it looks like pacman layout
 def visual_of_nodes_and_edges(G, show_labels=True):
-    pos = { (x,y): (x, -y) for (x,y) in G.nodes }  #-y rotates so it looks more like Pac-man game, if this is changed it will rotate wrongly
+    pos = { (x,y): (x, y) for (x,y) in G.nodes }  #-y rotates so it looks more like Pac-man game, but then the NetworkX graph isnt an accurate representation so keep it like it is
     nx.draw(G, pos, with_labels=False, node_size=50) #Node size
-    nx.draw_networkx_labels(G, pos, font_size=5) #Label font size
+    nx.draw_networkx_labels(G, pos, font_size=10) #Label font size
     plt.gca().set_aspect("equal") #keep equal square porpotions so it resembles pacman game
     plt.show()
 
@@ -69,7 +78,7 @@ class GraphGymEnv(GymEnv):
         self.node_list = sorted(self.graph.nodes())  #Make sure the matrix is sorted
         self.num_nodes = len(self.node_list) #Number of walkable tiles in total
 
-        #print(self.node_list, self.num_nodes)
+        #DEBUG: print(self.node_list, self.num_nodes)
 
         #Each node will contain: [pellet, capsule, ghost, pacman]
         self.num_features = 4
@@ -85,18 +94,23 @@ class GraphGymEnv(GymEnv):
         food_grid = state.getFood().asNpArray()       #bool [x][y]
         capsules = set(state.getCapsules())           #set[(x, y)]
         ghosts = set(state.getGhostPositions())       #set[(x, y)]
-        pacman_pos = state.getPacmanPosition()        #(x,y) (Double, check)
-
-        feats = np.zeros((self.num_nodes, self.num_features), dtype=np.int8) #Create empty feature matrix of shape (num_nodes, num_features)
+        pacman_pos = state.getPacmanPosition()        #(x,y) 
+        
+        #DEBUG: print(pacman_pos) #Use to see pacman position through out training, should see him moving around and occasionally dying and returning to start position
+        
+        node_features = np.zeros((self.num_nodes, self.num_features), dtype=np.int8) #Create empty feature matrix of shape (num_nodes, num_features)
 
         #Loop through every node, if something is present we put 1, otherwise 0 should look something like [1, 0, 0, 0] or another combination of 1 or 0
         for i,(x, y) in enumerate(self.node_list):
-            feats[i,0] = 1 if food_grid[x][y] else 0
-            feats[i,1] = 1 if (x, y) in capsules else 0
-            feats[i,2] = 1 if (x, y) in ghosts  else 0
-            feats[i,3] = 1 if (x, y) == pacman_pos else 0
+            node_features[i,0] = 1 if food_grid[x][y] else 0
+            node_features[i,1] = 1 if (x, y) in capsules else 0
+            node_features[i,2] = 1 if (x, y) in ghosts  else 0
+            node_features[i,3] = 1 if (x, y) == pacman_pos else 0
 
-        return feats
+        #DEBUG: print(f"Node {(x,y)} -> features {node_features[i]}") #print the feature vector for a specific node every iteration, use for testing
+        return node_features
+
+
     
     def reset(self, seed=None, options=None):
         _, info = super().reset(seed=seed, options=options) #GymEnv.reset()
@@ -115,6 +129,6 @@ class GraphGymEnv(GymEnv):
 #Test if works
 if __name__ == "__main__":
     #debug_layout("originalClassic")
-    env = GraphGymEnv("originalClassic")
+    env = GraphGymEnv("originalClassic") #Keep uncommented if you run this file like this; "python -m environment.Gymenv_graph"
     #model = PPO("MlpPolicy", env, verbose=1)
     #model.learn(total_timesteps=5000)
