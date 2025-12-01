@@ -23,7 +23,7 @@ state_abstraction:
   feature_type: "medium"
 
 training:
-  num_episodes: 5000
+  num_episodes: 2000
 
 output:
   base_dir: "data/experiments"

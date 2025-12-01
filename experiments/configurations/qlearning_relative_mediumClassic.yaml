@@ -1,11 +1,11 @@
 # experiments/configurations/qlearning_medium_smallGrid.yaml
-experiment_name: "qlearning_medium_smallGrid"
+experiment_name: "qlearning_medium_mediumClassic"
 
 environment:
-  layout: "smallGrid"
+  layout: "mediumClassic"
   rewards:
-    time_penalty: -1
-    eat_food: 10
+    time_penalty: -5
+    eat_food: 30
     eat_ghost: 200
     win: 500
     lose: -500
@@ -15,20 +15,18 @@ agent:
   learning_rate: 0.1
   discount_factor: 0.99
   epsilon: 1.0
-  epsilon_decay: 0.995
+  epsilon_decay: 0.9995
   epsilon_min: 0.01
 
 state_abstraction:
   enabled: true
-  feature_type: "medium"  # Balanced: 2 ghosts, food count buckets
+  feature_type: "relative"
 
 training:
-  num_episodes: 2000
+  num_episodes: 5000
 
 output:
   base_dir: "data/experiments"
   save_q_table: true
   save_metrics: true
   print_interval: 100
-  record_games: true           # Record games
-  record_interval: 1000         # Record game per interval

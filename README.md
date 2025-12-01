@@ -79,7 +79,48 @@ In development
 
 ## Getting Started
 
-More detailed setup and usage instructions will be added as the project develops.
+## Running Experiments
+
+To run an experiment, use the `experiment_runner.py` script with a configuration file:
+
+```bash
+python experiments/experiment_runner.py experiments/configurations/your_config.yaml
+```
+
+### Configuration
+Configuration files are located in `experiments/configurations/`. You can control various aspects of the experiment, including:
+- **Environment**: Layout, rewards
+- **Agent**: Learning rate, epsilon, discount factor
+- **State Abstraction**: Feature type (`simple`, `medium`, `rich`, `relative`)
+- **Output**: Logging, saving models, and **recording games**
+
+To enable game recording, add the following to your config:
+```yaml
+output:
+  record_games: true
+  record_interval: 10 # Record every 10th game
+```
+
+## Replaying Games
+
+If you have enabled recording in your experiment, you can replay the games using the `replay.py` tool.
+Recordings are saved in `data/recordings/session-TIMESTAMP/`.
+
+To replay all games in a session:
+```bash
+python tools/replay.py session-TIMESTAMP -a
+```
+
+To replay a specific game (e.g., game 5):
+```bash
+python tools/replay.py session-TIMESTAMP -g 5
+```
+
+To replay the first and last game (useful to see improvement):
+```bash
+python tools/replay.py session-TIMESTAMP -fl
+```
+
 
 ## Academic Context
 

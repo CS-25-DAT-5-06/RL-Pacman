@@ -26,7 +26,7 @@ agent:
 # State Abstraction
 state_abstraction:
   enabled: true
-  feature_type: "simple"  # Options: "none", "simple", "medium", "rich"
+  feature_type: "simple"  # Options: "none", "relative", "simple", "medium", "rich"
   # none: no abstraction, clean q-learning
   # simple: minimal features, small state space
   # medium: balanced features
@@ -48,4 +48,3 @@ output:
   record_interval: 1000         # Record game per interval
 
 
-  

@@ -87,6 +87,8 @@ class StateAbstraction:
             return self._extract_medium_state(agent_pos, ghosts, food, observation)
         elif self.feature_type == "rich":
             return self._extract_rich_state(agent_pos, ghosts, food, observation)
+        elif self.feature_type == "relative":
+            return self._extract_relative_state(agent_pos, ghosts, food, observation)
         else:
             raise ValueError(f"Unknown feature_type: {self.feature_type}")
         
@@ -184,6 +186,24 @@ class StateAbstraction:
         capsule_info = self._get_closest_capsule_info(agent_pos, capsules)
         
         state = (x, y, ghost_info, food_dirs, capped_food_bucket, capsule_info)
+        return state
+    
+
+    def _extract_relative_state(self, agent_pos, ghosts, food, observation):
+        """
+        Relative complexity - removes absolute coordinates
+        Features: 1 closest ghost, food directions, legal moves
+        """
+        # Get info about 1 closest ghost
+        ghost_info = self._get_closest_ghost_info(agent_pos, ghosts, n=1)
+        
+        # Check food in cardinal directions
+        food_dirs = self._get_food_directions(agent_pos, food)
+        
+        # Legal moves signature
+        legal_moves = self._get_legal_moves_signature(observation)
+        
+        state = (ghost_info, food_dirs, legal_moves)
         return state
     
 
@@ -394,3 +414,18 @@ class StateAbstraction:
         """
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
     
+
+    def _get_legal_moves_signature(self, observation):
+        """
+        Extracts legal moves as a hashable tuple of booleans (N, E, S, W)
+        """
+        # nextLegalMoves is an array of 5 integers, where -1 is padding
+        # 0: STOP, 1: EAST, 2: NORTH, 3: WEST, 4: SOUTH
+        legal_moves = observation['nextLegalMoves']
+        
+        has_north = 2 in legal_moves
+        has_east = 1 in legal_moves
+        has_south = 4 in legal_moves
+        has_west = 3 in legal_moves
+        
+        return (has_north, has_east, has_south, has_west)
