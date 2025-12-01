@@ -16,7 +16,7 @@ class GraphEnv(ge.GymEnv):
 
         #np.set_printoptions(threshold=sys.maxsize)
         #print(f"Nodes:  {self.nodes}")
-        print(f"Edges:  {self.edges}")
+        #print(f"Edges:  {self.edges}")
         #print(f"Edge Features:  {self.edge_features}")
 
         # TODO: Create the observation space as a gym graph (with gymnasium.spaces.Graph)
