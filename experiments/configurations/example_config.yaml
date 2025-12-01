@@ -44,3 +44,8 @@ output:
   save_q_table: true            # Save trained Q-table
   save_metrics: true            # Save training metrics CSV
   print_interval: 100           # Print progress every N episodes
+  record_games: false           # Record games
+  record_interval: 1000         # Record game per interval
+
+
+  

@@ -20,7 +20,7 @@ agent:
 
 state_abstraction:
   enabled: true
-  feature_type: "simple"
+  feature_type: "medium"
 
 training:
   num_episodes: 5000

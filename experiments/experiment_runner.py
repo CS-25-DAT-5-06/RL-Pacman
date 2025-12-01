@@ -61,7 +61,9 @@ def run_experiment(config_path):
     env = GymEnv(
         layoutName=(config['environment']['layout']),
         render_mode=None,
-        reward_config=reward_config #pass rewards as dict
+        reward_config=reward_config, #pass rewards as dict
+        record=config['output'].get('record_games', False),
+        record_interval=config['output'].get('record_interval', 1000)
     )
 
     # Setup state abstraction
