@@ -16,7 +16,7 @@ class GraphEnv(ge.GymEnv):
 
         #np.set_printoptions(threshold=sys.maxsize)
         #print(f"Nodes:  {self.nodes}")
-        #print(f"Edges:  {self.edges}")
+        print(f"Edges:  {self.edges}")
         #print(f"Edge Features:  {self.edge_features}")
 
         # TODO: Create the observation space as a gym graph (with gymnasium.spaces.Graph)
@@ -58,7 +58,7 @@ class GraphEnv(ge.GymEnv):
                     
         
         # All of this computing... just to make it into a NumPy array for more computing :)
-        return np.array(node_list), np.array(edge_link_list), np.array(edge_features_list)
+        return np.array(node_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
                     
                     
 
@@ -98,23 +98,26 @@ class GraphEnv(ge.GymEnv):
                 if node[4] == xCoordinateToTest and node[5] == yCoordinateToTest:
                     if x == 1 or x == -1:
                         #Adding edge and direction feature
-                        running_edge_link_list.append([(xCoordinate, yCoordinate), (xCoordinateToTest, yCoordinateToTest)])
-                        running_edge_feature_list.append(["East"])
+                        running_edge_link_list.append([self.convert_xy_coordinates_to_id(xCoordinate, yCoordinate), self.convert_xy_coordinates_to_id(xCoordinateToTest, yCoordinateToTest)])
+                        running_edge_feature_list.append([self._direction_to_action["East"]])
 
                         #Adding the inverse direction
-                        running_edge_link_list.append([(xCoordinateToTest, yCoordinateToTest), (xCoordinate, yCoordinate)])
-                        running_edge_feature_list.append(["West"])
+                        running_edge_link_list.append([self.convert_xy_coordinates_to_id(xCoordinateToTest, yCoordinateToTest), self.convert_xy_coordinates_to_id(xCoordinate, yCoordinate)])
+                        running_edge_feature_list.append([self._direction_to_action["West"]])
 
                     if y == 1 or y == -1:
                         #Adding edge and direction feature
-                        running_edge_link_list.append([(xCoordinate, yCoordinate), (xCoordinateToTest, yCoordinateToTest)])
-                        running_edge_feature_list.append(["North"])
+                        running_edge_link_list.append([self.convert_xy_coordinates_to_id(xCoordinate, yCoordinate), self.convert_xy_coordinates_to_id(xCoordinateToTest, yCoordinateToTest)])
+                        running_edge_feature_list.append([self._direction_to_action["North"]])
 
                         #Adding the inverse direction
-                        running_edge_link_list.append([(xCoordinateToTest, yCoordinateToTest), (xCoordinate, yCoordinate)])
-                        running_edge_feature_list.append(["South"])
+                        running_edge_link_list.append([self.convert_xy_coordinates_to_id(xCoordinateToTest, yCoordinateToTest), self.convert_xy_coordinates_to_id(xCoordinate, yCoordinate)])
+                        running_edge_feature_list.append([self._direction_to_action["South"]])
 
         return running_edge_link_list, running_edge_feature_list
+    
+    def convert_xy_coordinates_to_id(self, xCoordinate, yCoordinate, width=10):
+        return yCoordinate * width + xCoordinate
     
     #endregion
 
