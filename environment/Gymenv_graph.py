@@ -40,7 +40,11 @@ def _build_graph_from_layout(layout_obj):
             if (nx2, ny2) in G.nodes:
                 G.add_edge((x,y), (nx2,ny2))
 
-    visual_of_nodes_and_edges(G)
+
+    #print(list(G.edges(data=True))) #Prints EVERY edges
+    #print(list(G.edges(node, data=True))) #Can write a specific node to test
+
+    #visual_of_nodes_and_edges(G) #Visual of NetworkX graph, change to directed graph or something else by editing G variable above
 
     return G
 
@@ -60,7 +64,6 @@ class GraphGymEnv(GymEnv):
         ):
         #Calls parent class constructor GymEnv
         super().__init__(layoutName=layoutName, record=record, record_interval=record_interval, config=config, render_mode=render_mode,) 
-
         
         self.graph = _build_graph_from_layout(self.layout) #The NetworkX graph built from the layout
         self.node_list = sorted(self.graph.nodes())  #Make sure the matrix is sorted
