@@ -122,10 +122,10 @@ class GameState:
 
         # Time passes
         if agentIndex == 0:
-            if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+            if rewardConfig == None:
                 state.data.scoreChange += -TIME_PENALTY  # Penalty for waiting around
             else:
-                state.data.scoreChange += int(rewardConfig['REWARDS']['TIME_PENALTY'])
+                state.data.scoreChange += rewardConfig['TIME_PENALTY']
         else:
             GhostRules.decrementTimer(state.data.agentStates[agentIndex])
 
@@ -403,27 +403,27 @@ class PacmanRules:
         x, y = position
         # Eat food
         if state.data.food[x][y]:
-            if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+            if rewardConfig == None:
                 state.data.scoreChange += 10
             else:
-                state.data.scoreChange += int(rewardConfig['REWARDS']['EAT_FOOD'])
+                state.data.scoreChange += rewardConfig['EAT_FOOD']
             state.data.food = state.data.food.copy()
             state.data.food[x][y] = False
             state.data._foodEaten = position
             # TODO: cache numFood?
             numFood = state.getNumFood()
             if numFood == 0 and not state.data._lose:
-                if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+                if rewardConfig == None:
                     state.data.scoreChange += 500
                 else:
-                    state.data.scoreChange += int(rewardConfig['REWARDS']['WIN'])     
+                    state.data.scoreChange += rewardConfig['WIN']
                 state.data._win = True
         # Eat capsule
         if(position in state.getCapsules()):
             state.data.capsules.remove(position)
             state.data._capsuleEaten = position
-            if rewardConfig != None and 'REWARDS' in rewardConfig.sections() and 'CAPSULE' in list(rewardConfig['REWARDS'].keys()):
-                state.data.scoreChange += int(rewardConfig['REWARDS']['CAPSULE'])
+            if rewardConfig != None and 'CAPSULE' in rewardConfig:
+                state.data.scoreChange += rewardConfig['CAPSULE']
             # Reset all ghosts' scared timers
             for index in range(1, len(state.data.agentStates)):
                 state.data.agentStates[index].scaredTimer = SCARED_TIME
@@ -494,20 +494,20 @@ class GhostRules:
 
     def collide(state, ghostState, agentIndex):
         if ghostState.scaredTimer > 0:
-            if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+            if rewardConfig == None:
                 state.data.scoreChange += 200
             else:
-                state.data.scoreChange += int(rewardConfig['REWARDS']['EAT_GHOST'])
+                state.data.scoreChange += rewardConfig['EAT_GHOST']
             GhostRules.placeGhost(state, ghostState)
             ghostState.scaredTimer = 0
             # Added for first-person
             state.data._eaten[agentIndex] = True
         else:
             if not state.data._win:
-                if rewardConfig == None or 'REWARDS' not in rewardConfig.sections():
+                if rewardConfig == None:
                     state.data.scoreChange -= 500
                 else:
-                    state.data.scoreChange += int(rewardConfig['REWARDS']['LOSE'])
+                    state.data.scoreChange += rewardConfig['LOSE']
                 state.data._lose = True
     collide = staticmethod(collide)
 

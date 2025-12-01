@@ -64,6 +64,10 @@ class GymEnv(gym.Env):
             }
         else:
             self.reward_config = reward_config
+
+        self.record = record 
+        
+
         if record_interval != None:
             self.record_interval = record_interval
         else:
