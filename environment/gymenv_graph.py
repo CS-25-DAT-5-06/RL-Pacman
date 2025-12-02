@@ -5,6 +5,22 @@ from gymnasium.spaces import Graph, Box
 from . import gymenv as ge
 import networkx as nx
 import matplotlib.pyplot as plt
+from berkeley_pacman import pacman as pm
+from berkeley_pacman.util import *
+from berkeley_pacman import layout
+from berkeley_pacman.game import Directions
+
+
+#Settings constants
+TIMEOUT = 30
+ZOOM = 1.0
+FRAME_TIME = 0.001
+GHOST_AGENT = "RandomGhost"
+CATCH_EXCEPTIONS = False
+HORIZON = -1
+PACMAN = "KeyboardAgent"
+
+RECORDING_PATH = "data/recordings/"
 
 
 class GraphEnv(ge.GymEnv):
