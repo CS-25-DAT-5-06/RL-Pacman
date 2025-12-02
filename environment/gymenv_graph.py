@@ -40,19 +40,60 @@ class GraphEnv(ge.GymEnv):
         )
 
 
-        # TODO: Call the gym to nx graph conversion function and visualize it
-        G = self.gymGraphToNXGraph()
-        self.visual_of_nodes_and_edges(G)
-        #nx.draw(G, with_labels=True)
-        #plt.show()
-            
+        # Getting the NetworkX version of the graph, for visualization purposes
+        self.environmentGraph = self.gymGraphToNXGraph()
 
-        # TODO: (Optional) Redefine the action space here for clarity
+    
 
-        # TODO: Actually build the reset() function
+    
+    def reset(self, seed=None, options=None):
+        #region Copied from gymenv.py
+        #From runGames in pacman.py
+        self.rules = pm.ClassicGameRules(TIMEOUT)
+
+        ghostType = pm.moduleLoadAgent(GHOST_AGENT,True)
+        ghosts = [ghostType(i+1) for i in range(self.layout.numGhosts)]
+
+        pacman = pm.moduleLoadAgent(PACMAN, False)
+        
+        
+        if self.render_mode == None:
+            self.beQuiet = True
+            # Suppress output and graphics
+            import berkeley_pacman.textDisplay as textDisplay
+            self.gameDisplay = textDisplay.NullGraphics()
+            self.rules.quiet = True
+        else:
+            self.beQuiet = False
+            import berkeley_pacman.graphicsDisplay as graphicsDisplay
+            display = graphicsDisplay.PacmanGraphics(
+            ZOOM, frameTime=FRAME_TIME)
+            self.gameDisplay = display
+            self.rules.quiet = False
+        self.game = self.rules.newGame(self.layout, HORIZON, pacman, ghosts,
+                             self.gameDisplay, self.beQuiet, CATCH_EXCEPTIONS, config=self.config)
+        
+        #FROM game.run in game.py
+
+        self.game.display.initialize(self.game.state.data)
+        self.game.numMoves = 0
+        
+        self.agentIndex = self.game.startingIndex
+        self.numAgents = len(self.game.agents)
+
+        currState = self.game.state
+        #endregion
+
+        observation = dict({
+            "nodes": self.nodes,
+            "edges": self.edges,
+            "edge_features": self.edge_features
+        })
+
+        return observation, dict()
 
 
-        # TODO: Actually build the step() function
+    # TODO: Actually build the step() function
 
 
     
