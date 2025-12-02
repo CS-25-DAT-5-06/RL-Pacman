@@ -170,7 +170,7 @@ class GraphEnv(ge.GymEnv):
 
         return G
 
-
+    # Got this function from David. Danke!
     def visual_of_nodes_and_edges(self, G, show_labels=True):
         pos = nx.get_node_attributes(G, "pos")  #-y rotates so it looks more like Pac-man game, but then the NetworkX graph isnt an accurate representation so keep it like it is
         nx.draw(G, pos, with_labels=True, node_size=50) #Node size
