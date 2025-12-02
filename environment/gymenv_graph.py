@@ -17,7 +17,7 @@ class GraphEnv(ge.GymEnv):
         self.nodes, self.edges, self.edge_features = self.createGraphFromLayout()
 
         #np.set_printoptions(threshold=sys.maxsize)
-        print(f"Nodes:  {self.nodes}")
+        #print(f"Nodes:  {self.nodes}")
         #print(f"Edges:  {self.edges}")
         #print(f"Edge Features:  {self.edge_features}")
 
@@ -79,7 +79,6 @@ class GraphEnv(ge.GymEnv):
                     
         
         # All of this computing... just to make it into a NumPy array for more computing :)
-        print(walkable_nodes)
         return np.array(node_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
                     
                     
@@ -146,10 +145,6 @@ class GraphEnv(ge.GymEnv):
                             break
                     
         return running_edge_link_list, running_edge_feature_list
-
-    
-    def convert_xy_coordinates_to_id(self, xCoordinate, yCoordinate, width=10):
-        return yCoordinate * width + xCoordinate
     
     #endregion
 
@@ -173,7 +168,7 @@ class GraphEnv(ge.GymEnv):
     # Got this function from David. Danke!
     def visual_of_nodes_and_edges(self, G, show_labels=True):
         pos = nx.get_node_attributes(G, "pos")  #-y rotates so it looks more like Pac-man game, but then the NetworkX graph isnt an accurate representation so keep it like it is
-        nx.draw(G, pos, with_labels=True, node_size=50) #Node size
+        nx.draw(G, pos, with_labels=True, node_size=150) #Node size
         nx.draw_networkx_labels(G, pos, font_size=10) #Label font size
         plt.gca().set_aspect("equal") #keep equal square porpotions so it resembles pacman game
         plt.show()
