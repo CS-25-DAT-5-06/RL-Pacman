@@ -12,12 +12,12 @@ class GraphEnv(ge.GymEnv):
         #Getting all of the necessary variables initialized just like in gymenv.py
         super().__init__(layoutName, record, record_interval, config, render_mode)        
 
-        # walkable_nodes amount of nodes, 6 feautures each
-        # Node Features (pellet/food, capsule, ghostAgentPresent, pacmanAgentPresent, trueX, trueY)
+        # walkable_nodes amount of nodes, 7 feautures each
+        # Node Features (id, pellet/food, capsule, ghostAgentPresent, pacmanAgentPresent, trueX, trueY)
         self.nodes, self.edges, self.edge_features = self.createGraphFromLayout()
 
         #np.set_printoptions(threshold=sys.maxsize)
-        #print(f"Nodes:  {self.nodes}")
+        print(f"Nodes:  {self.nodes}")
         #print(f"Edges:  {self.edges}")
         #print(f"Edge Features:  {self.edge_features}")
 
@@ -45,20 +45,6 @@ class GraphEnv(ge.GymEnv):
         self.visual_of_nodes_and_edges(G)
         #nx.draw(G, with_labels=True)
         #plt.show()
-
-        
-
-        self.non_connected_nodes = []
-        for nodes in self.nodes:
-            node_id = self.convert_xy_coordinates_to_id(nodes[4], nodes[5])
-            for edges in self.edges:
-                if node_id != edges[0] and node_id != edges[1]:
-                    self.non_connected_nodes.append(nodes)
-
-        self.unhappy_nodes = 0
-        for nodes in self.non_connected_nodes:
-            self.unhappy_nodes += 1
-        print(self.unhappy_nodes)
             
 
         # TODO: (Optional) Redefine the action space here for clarity
@@ -87,16 +73,13 @@ class GraphEnv(ge.GymEnv):
                     capsulePresent = self.checkCapsulePresence(x, y)
                     ghostAgentPresent, pacmanAgentPresent = self.checkAgentPresence(x, y)
 
-                    node_list.append([self.layout.food[x][y], capsulePresent, ghostAgentPresent, pacmanAgentPresent, x, y])
+                    node_list.append([walkable_nodes - 1, self.layout.food[x][y], capsulePresent, ghostAgentPresent, pacmanAgentPresent, x, y])
 
-                    # If there is somebody to actually/potentially connect to
-                    if walkable_nodes > 1:
-                        extension_for_edge_link_list, extension_for_edge_features_list = self.connectNewNodeToSurroundingNodes(x, y, node_list)
-                        edge_link_list.extend(extension_for_edge_link_list)
-                        edge_features_list.extend(extension_for_edge_features_list)
+        edge_link_list, edge_features_list = self.connectNodesToSurroundingNodes(node_list)
                     
         
         # All of this computing... just to make it into a NumPy array for more computing :)
+        print(walkable_nodes)
         return np.array(node_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
                     
                     
@@ -126,34 +109,44 @@ class GraphEnv(ge.GymEnv):
 
 
 
-    def connectNewNodeToSurroundingNodes(self, xCoordinate, yCoordinate, nodeList):
+    def connectNodesToSurroundingNodes(self, nodeList):
         running_edge_link_list = []
         running_edge_feature_list = []
 
-        for x, y in [(1,0), (-1,0), (0,1), (0,-1)]:
-            xCoordinateToTest, yCoordinateToTest = x + xCoordinate, y + yCoordinate
-            for node in nodeList:
-                # Testing if any of the x and y coordinates are nodes adjacent to the one we want to connect
-                if node[4] == xCoordinateToTest and node[5] == yCoordinateToTest:
-                    if x == 1 or x == -1:
-                        #Adding edge and direction feature
-                        running_edge_link_list.append([self.convert_xy_coordinates_to_id(xCoordinate, yCoordinate), self.convert_xy_coordinates_to_id(xCoordinateToTest, yCoordinateToTest)])
-                        running_edge_feature_list.append([self._direction_to_action["East"]])
+        # We go through every node
+        for node in nodeList:
+            # We calculate the adjacent coordinates in each direction
+            # Future Improvement opportunity: Calculate all of of the adjacent directions instead of looping through them and check them all in one go in the loop below
+            for x, y in [(1,0), (-1,0), (0,1), (0,-1)]:
+                nodeX = node[5]
+                nodeY = node[6]
+                xCoordinateToTest, yCoordinateToTest = x + nodeX, y + nodeY
+                for nodeToTest in nodeList:
+                    # Testing if any of the nodeToTest nodes is adjacent to node
+                    if nodeToTest[5] == xCoordinateToTest and nodeToTest[6] == yCoordinateToTest:
+                        # Adding edge and direction feature
+                        if x == 1:
+                            running_edge_link_list.append([node[0], nodeToTest[0]])
+                            running_edge_feature_list.append([self._direction_to_action["East"]])
+                            break
 
-                        #Adding the inverse direction
-                        running_edge_link_list.append([self.convert_xy_coordinates_to_id(xCoordinateToTest, yCoordinateToTest), self.convert_xy_coordinates_to_id(xCoordinate, yCoordinate)])
-                        running_edge_feature_list.append([self._direction_to_action["West"]])
+                        elif x == -1:
+                            running_edge_link_list.append([nodeToTest[0], node[0]])
+                            running_edge_feature_list.append([self._direction_to_action["West"]])
+                            break
 
-                    if y == 1 or y == -1:
-                        #Adding edge and direction feature
-                        running_edge_link_list.append([self.convert_xy_coordinates_to_id(xCoordinate, yCoordinate), self.convert_xy_coordinates_to_id(xCoordinateToTest, yCoordinateToTest)])
-                        running_edge_feature_list.append([self._direction_to_action["North"]])
+                        elif y == 1:
+                            running_edge_link_list.append([node[0], nodeToTest[0]])
+                            running_edge_feature_list.append([self._direction_to_action["North"]])
+                            break
 
-                        #Adding the inverse direction
-                        running_edge_link_list.append([self.convert_xy_coordinates_to_id(xCoordinateToTest, yCoordinateToTest), self.convert_xy_coordinates_to_id(xCoordinate, yCoordinate)])
-                        running_edge_feature_list.append([self._direction_to_action["South"]])
-
+                        elif y == -1:
+                            running_edge_link_list.append([nodeToTest[0], node[0]])
+                            running_edge_feature_list.append([self._direction_to_action["South"]])
+                            break
+                    
         return running_edge_link_list, running_edge_feature_list
+
     
     def convert_xy_coordinates_to_id(self, xCoordinate, yCoordinate, width=10):
         return yCoordinate * width + xCoordinate
@@ -166,7 +159,12 @@ class GraphEnv(ge.GymEnv):
 
         #Starting by adding nodes with their features. Generating labels from their x, y values.
         for i, features in enumerate(self.nodes):
-            G.add_node(i, features=features, pos=(self.nodes[i][4], self.nodes[i][5]), label=f"{self.convert_xy_coordinates_to_id(self.nodes[i][4], self.nodes[i][5])}/({self.nodes[i][4]}, {self.nodes[i][5]})")
+            nodeId = self.nodes[i][0]
+            nodeX = self.nodes[i][5]
+            nodeY = self.nodes[i][6]
+            nodeLabel = f"({nodeId}, ({nodeX}, {nodeY}))"
+            G.add_node(i, features=features, pos=(nodeX, nodeY), label=nodeLabel)
+
         for i, (u, v) in enumerate(self.edges):
             G.add_edge(u, v, action=self.edge_features[i][0], label=self._inv_direction_to_action[self.edge_features[i][0]])
 
@@ -175,7 +173,7 @@ class GraphEnv(ge.GymEnv):
 
     def visual_of_nodes_and_edges(self, G, show_labels=True):
         pos = nx.get_node_attributes(G, "pos")  #-y rotates so it looks more like Pac-man game, but then the NetworkX graph isnt an accurate representation so keep it like it is
-        nx.draw(G, pos, with_labels=False, node_size=50) #Node size
+        nx.draw(G, pos, with_labels=True, node_size=50) #Node size
         nx.draw_networkx_labels(G, pos, font_size=10) #Label font size
         plt.gca().set_aspect("equal") #keep equal square porpotions so it resembles pacman game
         plt.show()
