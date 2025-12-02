@@ -141,7 +141,3 @@ python experiments/evaluate_agent.py data/experiments/YOUR_EXPERIMENT_FOLDER --r
 ## Academic Context
 
 This work is part of a 5th semester computer science project exploring the applications of reinforcement learning algorithms.
-
-
-
-python experiments/evaluate_agent.py data/experiments/qlearning_relative_crisis_optimized_originalClassic_20251202_133005 --render
