@@ -1,0 +1,36 @@
+# Production Configuration for "Crisis vs. Greed vs. Hunt" Agent
+# Optimized for the new abstraction with Hunt Mode and Last Action.
+
+experiment_name: "qlearning_relative_crisis_optimized_originalClassic"
+
+environment:
+  layout: "originalClassic"
+  rewards:
+    time_penalty: -2      # Encourages speed
+    eat_food: 20          # Strong incentive to eat
+    eat_ghost: 200        # Big bonus for eating ghosts (when powered)
+    win: 500              # Major goal
+    lose: -500            # Major penalty
+    capsule: 50           # Good incentive to get powerups
+
+agent:
+  learning_rate: 0.2      # Higher alpha: Learn fast
+  discount_factor: 0.95   # High gamma: Value long-term survival and winning
+  epsilon: 1.0            # Start with full exploration
+  epsilon_decay: 0.999    # Slower decay for 5000 episodes
+  epsilon_min: 0.01       # Keep a tiny bit of randomness
+
+state_abstraction:
+  enabled: true
+  feature_type: "relative_crisis_bfs" # Now includes Hunt Mode + Last Action + BFS Navigation
+
+training:
+  num_episodes: 5000      # Extended training
+  eval_interval: 100
+  eval_episodes: 10
+
+output:
+  base_dir: "data/experiments"
+  save_q_table: true
+  save_metrics: true
+  print_interval: 100

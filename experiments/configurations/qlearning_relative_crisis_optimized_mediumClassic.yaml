@@ -4,23 +4,23 @@ experiment_name: "qlearning_medium_mediumClassic"
 environment:
   layout: "mediumClassic"
   rewards:
-    time_penalty: -5
-    eat_food: 30
+    time_penalty: -2
+    eat_food: 20
     eat_ghost: 200
     win: 500
     lose: -500
-    capsule: 10
+    capsule: 30
 
 agent:
-  learning_rate: 0.1
-  discount_factor: 0.99
+  learning_rate: 0.2
+  discount_factor: 0.95
   epsilon: 1.0
   epsilon_decay: 0.999
   epsilon_min: 0.01
 
 state_abstraction:
   enabled: true
-  feature_type: "relative"
+  feature_type: "relative_crisis"
 
 training:
   num_episodes: 5000
@@ -30,3 +30,5 @@ output:
   save_q_table: true
   save_metrics: true
   print_interval: 100
+  record_games: true           # Record games
+  record_interval: 1000         # Record game per interval

@@ -20,7 +20,7 @@ agent:
 
 state_abstraction:
   enabled: true
-  feature_type: "relative"
+  feature_type: "relative_grid"
 
 training:
   num_episodes: 5000

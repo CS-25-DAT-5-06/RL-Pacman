@@ -91,8 +91,9 @@ python experiments/experiment_runner.py experiments/configurations/your_config.y
 Configuration files are located in `experiments/configurations/`. You can control various aspects of the experiment, including:
 - **Environment**: Layout, rewards
 - **Agent**: Learning rate, epsilon, discount factor
-- **State Abstraction**: Feature type (`simple`, `medium`, `rich`, `relative`)
+- **State Abstraction**: Feature type (`simple`, `medium`, `rich`, `relative`, `relative_radius`, `relative_grid`, `relative_crisis`, `relative_crisis_bfs`)
 - **Output**: Logging, saving models, and **recording games**
+
 
 To enable game recording, add the following to your config:
 ```yaml
@@ -116,12 +117,31 @@ To replay a specific game (e.g., game 5):
 python tools/replay.py session-TIMESTAMP -g 5
 ```
 
-To replay the first and last game (useful to see improvement):
+To replay the first and last game:
 ```bash
 python tools/replay.py session-TIMESTAMP -fl
 ```
 
 
+## Evaluating Agents
+
+To watch a trained agent play without training:
+
+```bash
+python experiments/evaluate_agent.py data/experiments/YOUR_EXPERIMENT_FOLDER --render
+```
+
+- `YOUR_EXPERIMENT_FOLDER`: The directory containing `config.yaml` and `q_table.pkl`.
+- `--render`: Enable graphics.
+- `--episodes N`: Number of episodes to run (default: 10).
+- `--delay X`: Delay between frames in seconds (default: 0.05).
+
+
+
 ## Academic Context
 
 This work is part of a 5th semester computer science project exploring the applications of reinforcement learning algorithms.
+
+
+
+python experiments/evaluate_agent.py data/experiments/qlearning_relative_crisis_optimized_originalClassic_20251202_133005 --render

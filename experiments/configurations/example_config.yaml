@@ -26,17 +26,20 @@ agent:
 # State Abstraction
 state_abstraction:
   enabled: true
-  feature_type: "simple"  # Options: "none", "relative", "simple", "medium", "rich"
+  feature_type: "simple"  # Options: "none", "simple", "medium", "rich", "relative", "relative_radius", "relative_grid", "relative_crisis"
   # none: no abstraction, clean q-learning
-  # simple: minimal features, small state space
-  # medium: balanced features
-  # rich: maximum features, large state space
+  # simple: minimal features, small state space (includes absolute coordinates)
+  # medium: balanced features (includes absolute coordinates)
+  # rich: maximum features, large state space (includes absolute coordinates)
+  # relative: removes absolute coordinates, uses relative ghost/food info
+  # relative_radius: considers ghosts within a radius
+  # relative_grid: threat levels in cardinal directions (N, E, S, W)
+  # relative_crisis: "Crisis vs. Greed" - switches modes based on ghost proximity (Manhattan distance)
+  # relative_crisis_bfs: "Crisis vs. Greed" - same as above but uses BFS for "GPS" navigation (Recommended)
 
 # Training Configuration
 training:
   num_episodes: 5000      # Total training episodes
-  eval_interval: 100      # Evaluate every N episodes (future feature)
-  eval_episodes: 10       # Episodes per evaluation (future feature)
 
 # Output Configuration
 output:

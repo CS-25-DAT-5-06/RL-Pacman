@@ -1,5 +1,5 @@
-
 import numpy as np
+from collections import deque
 
 """
 STATE ABSTRACTION ARCHITECTURE
@@ -12,18 +12,18 @@ Reduces the Pacman state space into discrete, hashable states.
 Flow:
 ----------
     Pacman Game
-         ↓
+         ->
     GymEnv (gymenv_v2.py)
-         ↓ [Rich observation: full game state]
-         ↓ {agent: [x,y], food: [...], ghosts: [...], capsules: [...]}
-         ↓
+         -> [Rich observation: full game state]
+         -> {agent: [x,y], food: [...], ghosts: [...], capsules: [...]}
+         ->
     StateAbstraction
-         ↓ [Converts to simple hashable tuple]
-         ↓ (x, y, ghost_direction, ghost_dist_bucket, food_directions, ...)
-         ↓
+         -> [Converts to simple hashable tuple]
+         -> (x, y, ghost_direction, ghost_dist_bucket, food_directions, ...)
+         ->
     Q-Learning Agent
-         ↓ [Uses tuple as key in Q-table]
-         Q-table[(x, y, ghost_dir, ...)] → [Q-values for actions]
+         -> [Uses tuple as key in Q-table]
+         -> Q-table[(x, y, ghost_dir, ...)] → [Q-values for actions]
 
 When It's Called:
 -----------------
@@ -36,14 +36,9 @@ When It's Called:
 
 Abstraction Levels, TBD/WIP, pending results:
 -------------------
-- simple: Minimal features (position + nearest ghost + food directions)
-          → Smallest state space, may lose important information
-          
-- medium: Balanced features (position + 2 nearest ghosts + food info)
-          → Medium state space, balanced trade-off
-          
-- rich:   Maximum features (detailed ghost info + food counts)
-          → Larger state space, more information preserved
+Explanation of abstractions:
+
+
 """
 
 class StateAbstraction:
@@ -51,11 +46,12 @@ class StateAbstraction:
     Converts rich Gymnasium observation into reduced observed state space
     """
 
-    def __init__(self, grid_width, grid_height, feature_type="simple"):
+    def __init__(self, grid_width, grid_height, walls=None, feature_type="simple"):
         """
         Arguments:
-            state: Width of the grid
-            action: Height of the grid
+            grid_width: Width of the grid
+            grid_height: Height of the grid
+            walls: Grid of walls (Grid object or 2D array)
             feature_type:
                 "simple": Minimal abstractions
                 "medium":
@@ -63,21 +59,22 @@ class StateAbstraction:
         """
         self.grid_width = grid_width #env.layout.width
         self.grid_height = grid_height #env.layout.height
+        self.walls = walls
         self.feature_type = feature_type
         
-    def extract_state(self, observation):
+    def extract_state(self, observation, last_action=None):
         """
         Extracts a discrete hashable state from the Gymnasium
         Arguments:
             observation: We pass the entire observable dict from the gymnasiaum, 
             returned by gymenv
+            last_action: The action taken in the previous step (int) or None
         Returns:
             state: Hashable tuple representing the state.
         """
         agent_pos = tuple(observation['agent'])
         ghosts = observation['ghosts'].reshape(-1,2) # Converts the flat array from gym dict to pairs: [x1,y1,x2,y2,...] to [[x1,y1], [x2,y2],...]
         food = observation['food'].reshape(self.grid_width, self.grid_height)
-
 
         if self.feature_type == "none":
             return self._extract_raw_state(agent_pos, ghosts, food)
@@ -89,14 +86,151 @@ class StateAbstraction:
             return self._extract_rich_state(agent_pos, ghosts, food, observation)
         elif self.feature_type == "relative":
             return self._extract_relative_state(agent_pos, ghosts, food, observation)
+        elif self.feature_type == "relative_radius":
+            return self._extract_relative_radius_state(agent_pos, ghosts, food, observation)
+        elif self.feature_type == "relative_grid":
+            return self._extract_relative_grid_state(agent_pos, ghosts, food, observation)
+        elif self.feature_type == "relative_crisis":
+            return self._extract_relative_crisis_state(agent_pos, ghosts, food, observation, last_action)
+        elif self.feature_type == "relative_crisis_bfs":
+            return self._extract_relative_crisis_bfs_state(agent_pos, ghosts, food, observation, last_action)
         else:
             raise ValueError(f"Unknown feature_type: {self.feature_type}")
+
+    def _extract_relative_crisis_state(self, agent_pos, ghosts, food, observation, last_action):
+        """
+        Crisis vs. Greed vs. Hunt complexity
+        Mode 0 (Greed): Safe (Ghost > 4). State = (0, FoodDir, LegalMoves, LastAction)
+        Mode 1 (Crisis): Threatened (Ghost <= 4) & Not Scared. State = (1, GhostDir, LegalMoves, LastAction)
+        Mode 2 (Hunt): Threatened (Ghost <= 4) & Scared. State = (2, GhostDir, LegalMoves, LastAction)
+        """
+        # 1. Determine Mode and Target Direction
+        closest_ghost_dist = float('inf')
+        closest_ghost_pos = None
+        closest_ghost_idx = -1
         
-    # =================
-    # STATE EXTRACTORS:
-    # =================
+        for i, ghost in enumerate(ghosts):
+            dist = self._manhattan_distance(agent_pos, tuple(ghost))
+            if dist < closest_ghost_dist:
+                closest_ghost_dist = dist
+                closest_ghost_pos = ghost
+                closest_ghost_idx = i
+                
+        if closest_ghost_dist <= 4:
+            # Check if scared
+            scared_timers = observation.get('ghost_scared_timers', [])
+            is_scared = False
+            if len(scared_timers) > closest_ghost_idx:
+                # Only hunt if timer is sufficient to reach (dist < timer)
+                if scared_timers[closest_ghost_idx] > closest_ghost_dist:
+                    is_scared = True
 
+            if is_scared:
+                # HUNT MODE
+                mode = 2
+                # Target: Ghost
+                target_dir = self._get_direction(agent_pos, tuple(closest_ghost_pos))
+            else:
+                # CRISIS MODE
+                mode = 1
+                # Target: Ghost (to run away from)
+                target_dir = self._get_direction(agent_pos, tuple(closest_ghost_pos))
+        else:
+            # GREED MODE
+            mode = 0
+            # Get direction to closest food
+            food_list = np.argwhere(food)
+            if len(food_list) > 0:
+                # Find closest food
+                closest_food_dist = float('inf')
+                closest_food_pos = None
+                for f in food_list:
+                    dist = self._manhattan_distance(agent_pos, tuple(f))
+                    if dist < closest_food_dist:
+                        closest_food_dist = dist
+                        closest_food_pos = f
+                
+                target_dir = self._get_direction(agent_pos, tuple(closest_food_pos))
+            else:
+                target_dir = (0, 0) # No food left
 
+        # 2. Legal moves signature
+        legal_moves = self._get_legal_moves_signature(observation)
+        
+        # 3. Last Action (to prevent oscillation)
+        # last_action is an int (0-4) or None. Convert None to -1.
+        last_action_val = last_action if last_action is not None else -1
+
+        state = (mode, target_dir, legal_moves, last_action_val)
+        return state
+
+    def _extract_relative_crisis_bfs_state(self, agent_pos, ghosts, food, observation, last_action):
+        """
+        Same as relative_crisis but uses BFS for Greed Mode navigation.
+        """
+        # 1. Determine Mode and Target Direction
+        closest_ghost_dist = float('inf')
+        closest_ghost_pos = None
+        closest_ghost_idx = -1
+        
+        for i, ghost in enumerate(ghosts):
+            dist = self._manhattan_distance(agent_pos, tuple(ghost))
+            if dist < closest_ghost_dist:
+                closest_ghost_dist = dist
+                closest_ghost_pos = ghost
+                closest_ghost_idx = i
+                
+        if closest_ghost_dist <= 4:
+            # Check if scared
+            scared_timers = observation.get('ghost_scared_timers', [])
+            is_scared = False
+            if len(scared_timers) > closest_ghost_idx:
+                # Only hunt if timer is sufficient to reach (dist < timer)
+                if scared_timers[closest_ghost_idx] > closest_ghost_dist:
+                    is_scared = True
+
+            if is_scared:
+                # HUNT MODE
+                mode = 2
+                # Target: Ghost
+                target_dir = self._get_direction(agent_pos, tuple(closest_ghost_pos))
+            else:
+                # CRISIS MODE
+                mode = 1
+                # Target: Ghost (to run away from)
+                target_dir = self._get_direction(agent_pos, tuple(closest_ghost_pos))
+        else:
+            # GREED MODE
+            mode = 0
+            # Get direction to closest food
+            food_list = np.argwhere(food)
+            if len(food_list) > 0:
+                # Find closest food
+                closest_food_dist = float('inf')
+                closest_food_pos = None
+                for f in food_list:
+                    dist = self._manhattan_distance(agent_pos, tuple(f))
+                    if dist < closest_food_dist:
+                        closest_food_dist = dist
+                        closest_food_pos = f
+                
+                # Use BFS if walls are available, otherwise fallback to Manhattan
+                if self.walls is not None:
+                    target_dir = self._get_maze_direction(agent_pos, tuple(closest_food_pos))
+                else:
+                    target_dir = self._get_direction(agent_pos, tuple(closest_food_pos))
+            else:
+                target_dir = (0, 0) # No food left
+
+        # 2. Legal moves signature
+        legal_moves = self._get_legal_moves_signature(observation)
+        
+        # 3. Last Action (to prevent oscillation)
+        # last_action is an int (0-4) or None. Convert None to -1.
+        last_action_val = last_action if last_action is not None else -1
+
+        state = (mode, target_dir, legal_moves, last_action_val)
+        return state
 
     def _extract_raw_state(self, agent_pos, ghosts, food):
         """
@@ -188,7 +322,6 @@ class StateAbstraction:
         state = (x, y, ghost_info, food_dirs, capped_food_bucket, capsule_info)
         return state
     
-
     def _extract_relative_state(self, agent_pos, ghosts, food, observation):
         """
         Relative complexity - removes absolute coordinates
@@ -206,6 +339,39 @@ class StateAbstraction:
         state = (ghost_info, food_dirs, legal_moves)
         return state
     
+    def _extract_relative_radius_state(self, agent_pos, ghosts, food, observation):
+        """
+        Relative Radius complexity
+        Features: Ghosts within radius (cardinal dirs), food dirs, legal moves
+        """
+        # Get info about ghosts within radius
+        ghost_info = self._get_ghost_info_radius(agent_pos, ghosts, radius=5)
+        
+        # Check food in cardinal directions
+        food_dirs = self._get_food_directions(agent_pos, food)
+        
+        # Legal moves signature
+        legal_moves = self._get_legal_moves_signature(observation)
+        
+        state = (ghost_info, food_dirs, legal_moves)
+        return state
+    
+    def _extract_relative_grid_state(self, agent_pos, ghosts, food, observation):
+        """
+        Relative Grid complexity
+        Features: Ghost threat grid (N, E, S, W), food dirs, legal moves
+        """
+        # Get threat grid
+        threat_grid = self._get_ghost_threat_grid(agent_pos, ghosts, radius=5)
+        
+        # Check food in cardinal directions
+        food_dirs = self._get_food_directions(agent_pos, food)
+        
+        # Legal moves signature
+        legal_moves = self._get_legal_moves_signature(observation)
+        
+        state = (threat_grid, food_dirs, legal_moves)
+        return state
 
     # =================
     # HELPER METHODS
@@ -270,9 +436,6 @@ class StateAbstraction:
         dx = 8-5= 3, normalized to 1 (east)
         dy = 7-5 = 2, normalized to 1 (north)
         returns 1,1, meaning, target is north east of pacman
-
-        
-
         """
 
         dx = pos2[0] - pos1[0]
@@ -292,27 +455,19 @@ class StateAbstraction:
             dir_y = 1
         else:
             dir_y = -1
+            
+        return (dir_x, dir_y)
 
-        return(dir_x, dir_y)
-    
-
-    def _get_food_directions(self, agent_pos, food, radius=3):
+    def _get_food_directions(self, agent_pos, food):
         """
-        Check if food exists in all directions + 3 (radius=3)
-        args:
-            agent_pos
-            food: 2d boolean array, true = food exists
-            radius: How many steps to look in each direction
-
-        returns:
-            tuple of 4 booleans, north, east, south, west
- 
+        Check for food in cardinal directions (N, E, S, W) within radius 5.
+        Returns a tuple of 4 booleans.
         """
         x, y = agent_pos
-
-        # Check directions for food, in radius
+        radius = 5
+        
         has_food_north = False
-        for y_coord in range(y +1, min(y + radius + 1, self.grid_height)):
+        for y_coord in range(y + 1, min(y + radius + 1, self.grid_height)):
             if food[x, y_coord]:
                 has_food_north = True
                 break
@@ -334,25 +489,16 @@ class StateAbstraction:
             if food[x_coord, y]:
                 has_food_west = True
                 break
-
+                
         return (has_food_north, has_food_east, has_food_south, has_food_west)
 
-
-
-    def _count_nearby_food(self, agent_pos, food, radius=3):
+    def _count_nearby_food(self, agent_pos, food, radius=5):
         """
-        count food pellets within manhatten distance radius
-        args:
-            agent_pos
-            food: 2d, boolean array
-            radius: max manhattan distance
-        returns:
-            Integer count of nearby food
+        Count food within a certain radius
         """
         x, y = agent_pos
         food_count = 0
-
-        # Check for food within radius
+        
         for dx in range(-radius, radius + 1):
             for dy in range(-radius, radius + 1):
                 manhattan_dist = abs(dx) + abs(dy)
@@ -413,7 +559,6 @@ class StateAbstraction:
         Manhatten distance, you only move horizontally or vertically, does not account for walls etc.
         """
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
-    
 
     def _get_legal_moves_signature(self, observation):
         """
@@ -429,3 +574,145 @@ class StateAbstraction:
         has_west = 3 in legal_moves
         
         return (has_north, has_east, has_south, has_west)
+
+    def _get_ghost_info_radius(self, agent_pos, ghosts, radius=5):
+        """
+        Get info about ghosts within radius using simplified cardinal directions.
+        Returns a tuple of ghost states.
+        Each ghost state is: (cardinal_direction, distance_bucket) or None if outside radius.
+        """
+        if len(ghosts) == 0:
+            return tuple()
+
+        ghost_features = []
+        
+        # Calculate distance for all ghosts
+        ghost_distances_and_positions = []
+        for ghost in ghosts:
+            distance = self._manhattan_distance(agent_pos, tuple(ghost))
+            ghost_distances_and_positions.append((distance, ghost))
+            
+        # Sort by distance
+        ghost_distances_and_positions.sort(key=lambda x: x[0])
+        
+        for distance, ghost_position in ghost_distances_and_positions:
+            if distance > radius:
+                ghost_features.append(0) # 0 = Safe/Far
+            else:
+                # Ghost is close!
+                # 1. Get Cardinal Direction
+                dx = ghost_position[0] - agent_pos[0]
+                dy = ghost_position[1] - agent_pos[1]
+                
+                # Simplify to N, E, S, W
+                if abs(dx) > abs(dy):
+                    # Horizontal
+                    direction = 1 if dx > 0 else 3 # East or West
+                else:
+                    # Vertical
+                    direction = 2 if dy > 0 else 4 # North or South
+                    
+                # 2. Get Distance Bucket
+                # Critical (<= 2) or Near (3-5)
+                dist_bucket = 1 if distance <= 2 else 2
+                
+
+        n_closest_ghosts = ghost_distances_and_positions[:n]
+
+        for distance, ghost_position in n_closest_ghosts:
+            direction = self._get_direction(agent_pos, tuple(ghost_position))
+            bucket_number = distance // distance_per_bucket
+            final_bucket = min(bucket_number, 3) # cap at bucket size 
+            ghost_features.append((direction, final_bucket))
+
+        # if fewer ghosts than n exists, pad with dummy
+        while len(ghost_features) < n:
+            dummy_ghost_info = ((0,0), 3) #Dummy, no direction, far away
+            ghost_features.append(dummy_ghost_info)
+
+        return tuple(ghost_features)
+    
+
+    def _get_ghost_threat_grid(self, agent_pos, ghosts, radius=5):
+        """Get threat levels for cardinal directions (N, E, S, W)."""
+        # Initialize grid: [North, East, South, West]
+        # Using list for mutability, convert to tuple at end
+        grid = [0, 0, 0, 0] 
+        
+        if len(ghosts) == 0:
+            return tuple(grid)
+            
+        for ghost in ghosts:
+            distance = self._manhattan_distance(agent_pos, tuple(ghost))
+            
+            if distance > radius:
+                continue
+                
+            # Determine direction
+            dx = ghost[0] - agent_pos[0]
+            dy = ghost[1] - agent_pos[1]
+            
+            # 0: North, 1: East, 2: South, 3: West
+            direction_idx = -1
+            if abs(dx) > abs(dy):
+                # Horizontal
+                if dx > 0: direction_idx = 1 # East
+                else:      direction_idx = 3 # West
+            else:
+                # Vertical
+                if dy > 0: direction_idx = 0 # North
+                else:      direction_idx = 2 # South
+                
+            # Determine threat level
+            threat_level = 0
+            if distance <= 2:
+                threat_level = 2 # Critical
+            else:
+                threat_level = 1 # Warning
+                
+            # Update grid with max threat
+            grid[direction_idx] = max(grid[direction_idx], threat_level)
+            
+        return tuple(grid)
+    
+
+
+    def _get_maze_direction(self, start_pos, end_pos):
+        """
+        Returns the direction of the first step in the shortest path from start_pos to end_pos
+        using BFS, accounting for walls.
+        """
+        if start_pos == end_pos:
+            return (0, 0)
+
+        start_x, start_y = start_pos
+        end_x, end_y = end_pos
+        
+        # Queue stores (x, y, first_move_direction)
+        queue = deque()
+        visited = set()
+        visited.add(start_pos)
+
+        # Initialize queue with neighbors
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        
+        for dx, dy in directions:
+            next_x, next_y = start_x + dx, start_y + dy
+            if not self.walls[next_x][next_y]: # Check if not wall
+                queue.append(((next_x, next_y), (dx, dy)))
+                visited.add((next_x, next_y))
+
+        while queue:
+            (curr_x, curr_y), first_dir = queue.popleft()
+            
+            if (curr_x, curr_y) == end_pos:
+                return first_dir
+            
+            for dx, dy in directions:
+                next_x, next_y = curr_x + dx, curr_y + dy
+                if not self.walls[next_x][next_y] and (next_x, next_y) not in visited:
+                    visited.add((next_x, next_y))
+                    queue.append(((next_x, next_y), first_dir))
+                    
+        # If no path found (shouldn't happen in connected maze), fallback to Manhattan
+        return self._get_direction(start_pos, end_pos)
