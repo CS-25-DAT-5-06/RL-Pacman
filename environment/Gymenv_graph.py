@@ -69,10 +69,25 @@ def visual_of_nodes_and_edges(G, show_labels=True):
 #We are wrapping GymEnv, but changing the observation so its a np.array with shape (294, 4) 
 class GraphGymEnv(GymEnv):
     def __init__(
-        self, layoutName, record=False, record_interval=None, config="/experiments/configurations/default.ini", render_mode=None, #If config file changes, use rewards above
+        self, layoutName, record=False, record_interval=None, reward_config=None, render_mode=None, #If config file changes, use rewards above
         ):
+
+        # Handle reward configuration
+        if reward_config is None:
+            # Default rewards
+            self.reward_config = {
+                'TIME_PENALTY': -1,
+                'EAT_FOOD': 10,
+                'EAT_GHOST': 200,
+                'WIN': 500,
+                'LOSE': -500,
+                'CAPSULE': 10
+            }
+        else:
+            self.reward_config = reward_config
+
         #Calls parent class constructor GymEnv
-        super().__init__(layoutName=layoutName, record=record, record_interval=record_interval, config=config, render_mode=render_mode,) 
+        super().__init__(layoutName=layoutName, record=record, record_interval=record_interval, reward_config=None, render_mode=render_mode,) 
         
         self.graph = _build_graph_from_layout(self.layout) #The NetworkX graph built from the layout
         self.node_list = sorted(self.graph.nodes())  #Make sure the matrix is sorted
@@ -110,8 +125,6 @@ class GraphGymEnv(GymEnv):
         #DEBUG: print(f"Node {(x,y)} -> features {node_features[i]}") #print the feature vector for a specific node every iteration, use for testing
         return node_features
 
-
-    
     def reset(self, seed=None, options=None):
         _, info = super().reset(seed=seed, options=options) #GymEnv.reset()
         obs = self.build_node_features() #Use observations from build_node_features not from GymEnv.py
