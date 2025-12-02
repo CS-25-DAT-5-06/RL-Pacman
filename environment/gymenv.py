@@ -95,6 +95,7 @@ class GymEnv(gym.Env):
             "agent": gym.spaces.Box(low = np.array([0,0]),high=np.array([self.layout.width-1,self.layout.height-1]),shape=(2,),dtype=np.int64),
             "food": gym.spaces.Box(low = 0, high = 1, shape = (self.layout.width*self.layout.height,),dtype=np.bool),
             "ghosts": gym.spaces.Box(low = 0,high = max(self.layout.width - 1,self.layout.height - 1),shape=(2*self.layout.numGhosts,) ,dtype=np.int64),
+            "ghost_scared_timers": gym.spaces.Box(low = 0, high = 100, shape=(self.layout.numGhosts,), dtype=np.int64),
             "capsules": gym.spaces.Box(low = -1,high = max(self.layout.width - 1,self.layout.height - 1),shape=(self.shapeCapsules,), dtype=np.int64),
             "nextLegalMoves": gym.spaces.Box(low = -1, high=4,shape=(5,),dtype=np.int64)
         })
@@ -172,6 +173,7 @@ class GymEnv(gym.Env):
             "agent": np.array([currState.getPacmanPosition()[0],currState.getPacmanPosition()[1]]),
             "food":  currState.getFood().asNpArray().flatten(),
             "ghosts": tupleArrayToArrayArray(currState.getGhostPositions()).flatten(),
+            "ghost_scared_timers": np.array([g.scaredTimer for g in currState.getGhostStates()], dtype=np.int64),
             "capsules": tupleArrayToArrayArray(currState.getCapsules()).flatten(),
             "nextLegalMoves": obsLegalActions
         })
@@ -242,6 +244,7 @@ class GymEnv(gym.Env):
             "agent": np.array([currState.getPacmanPosition()[0],currState.getPacmanPosition()[1]]),
             "food":  currState.getFood().asNpArray().flatten(),
             "ghosts": tupleArrayToArrayArray(currState.getGhostPositions()).flatten(),
+            "ghost_scared_timers": np.array([g.scaredTimer for g in currState.getGhostStates()], dtype=np.int64),
             "capsules": capsules,
             "nextLegalMoves": obsLegalActions
         })

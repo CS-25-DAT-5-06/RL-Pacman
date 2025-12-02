@@ -46,14 +46,14 @@ def run_experiment(config_path):
 
     config = load_config(config_path)
 
-    print("=" * 70)
+    print("#" * 69)
     print("EXPERIMENTS, YESSS")
-    print("=" * 70)
+    print("#" * 69)
     print(f"Experiment: {config['experiment_name']}")
     print(f"Layout: {config['environment']['layout']}")
     print(f"Episodes: {config['training']['num_episodes']}")
     print(f"State Abstraction: {config['state_abstraction']['feature_type']}")
-    print("=" * 70)
+    print("#" * 69)
 
 
     # Setup environment with reward config
@@ -61,13 +61,16 @@ def run_experiment(config_path):
     env = GymEnv(
         layoutName=(config['environment']['layout']),
         render_mode=None,
-        reward_config=reward_config #pass rewards as dict
+        reward_config=reward_config, #pass rewards as dict
+        record=config['output'].get('record_games', False),
+        record_interval=config['output'].get('record_interval', 10)
     )
 
     # Setup state abstraction
     abstractor = StateAbstraction(
         grid_width=env.layout.width,
         grid_height=env.layout.height,
+        walls=env.layout.walls,
         feature_type=config['state_abstraction']['feature_type']
     )
 
@@ -93,7 +96,8 @@ def run_experiment(config_path):
     # Training loop
     for episode in range(config['training']['num_episodes']):
         obs, info = env.reset()
-        state = abstractor.extract_state(obs)
+        last_action = None
+        state = abstractor.extract_state(obs, last_action)
         
         episode_reward = 0
         episode_steps = 0
@@ -106,12 +110,15 @@ def run_experiment(config_path):
             # Environment step
             next_obs, reward, terminated, truncated, info = env.step(action + 1)  # +1 to skip STOP action
             done = terminated or truncated
-            next_state = abstractor.extract_state(next_obs)
+            
+            # Extract next state with current action as last_action
+            next_state = abstractor.extract_state(next_obs, action)
             
             # Update Q-table
             agent.update(state, action, reward, next_state, done)
             
             state = next_state
+            last_action = action
             episode_reward += reward
             episode_steps += 1
         
