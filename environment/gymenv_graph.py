@@ -58,6 +58,7 @@ class GraphEnv(ge.GymEnv):
 
         # Getting the NetworkX version of the graph, for visualization purposes
         self.environmentGraph = self.gymGraphToNXGraph()
+        self.visual_of_nodes_and_edges(self.environmentGraph)
 
     
 
@@ -137,10 +138,6 @@ class GraphEnv(ge.GymEnv):
         
         # All of this computing... just to make it into a NumPy array for more computing :)
         return np.array(node_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
-                    
-                    
-
-
 
 
     def checkCapsulePresence(self, xCoordinate, yCoordinate):
@@ -187,7 +184,7 @@ class GraphEnv(ge.GymEnv):
                             break
 
                         elif x == -1:
-                            running_edge_link_list.append([nodeToTest[0], node[0]])
+                            running_edge_link_list.append([node[0], nodeToTest[0]])
                             running_edge_feature_list.append([self._direction_to_action["West"]])
                             break
 
@@ -197,7 +194,7 @@ class GraphEnv(ge.GymEnv):
                             break
 
                         elif y == -1:
-                            running_edge_link_list.append([nodeToTest[0], node[0]])
+                            running_edge_link_list.append([node[0], nodeToTest[0]])
                             running_edge_feature_list.append([self._direction_to_action["South"]])
                             break
                     
