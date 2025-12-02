@@ -57,49 +57,14 @@ class GraphEnv(ge.GymEnv):
 
 
         # Getting the NetworkX version of the graph, for visualization purposes
-        self.environmentGraph = self.gymGraphToNXGraph()
-        self.visual_of_nodes_and_edges(self.environmentGraph)
+        self.environmentNXGraph = self.gymGraphToNXGraph()
+        self.visual_of_nodes_and_edges(self.environmentNXGraph)
 
     
 
     
     def reset(self, seed=None, options=None):
-        #region Copied from gymenv.py
-        #From runGames in pacman.py
-        self.rules = pm.ClassicGameRules(TIMEOUT)
-
-        ghostType = pm.moduleLoadAgent(GHOST_AGENT,True)
-        ghosts = [ghostType(i+1) for i in range(self.layout.numGhosts)]
-
-        pacman = pm.moduleLoadAgent(PACMAN, False)
-        
-        
-        if self.render_mode == None:
-            self.beQuiet = True
-            # Suppress output and graphics
-            import berkeley_pacman.textDisplay as textDisplay
-            self.gameDisplay = textDisplay.NullGraphics()
-            self.rules.quiet = True
-        else:
-            self.beQuiet = False
-            import berkeley_pacman.graphicsDisplay as graphicsDisplay
-            display = graphicsDisplay.PacmanGraphics(
-            ZOOM, frameTime=FRAME_TIME)
-            self.gameDisplay = display
-            self.rules.quiet = False
-        self.game = self.rules.newGame(self.layout, HORIZON, pacman, ghosts,
-                             self.gameDisplay, self.beQuiet, CATCH_EXCEPTIONS, config=self.config)
-        
-        #FROM game.run in game.py
-
-        self.game.display.initialize(self.game.state.data)
-        self.game.numMoves = 0
-        
-        self.agentIndex = self.game.startingIndex
-        self.numAgents = len(self.game.agents)
-
-        currState = self.game.state
-        #endregion
+        super().reset(seed=seed, options=options)
 
         observation = dict({
             "nodes": self.nodes,
@@ -110,7 +75,39 @@ class GraphEnv(ge.GymEnv):
         return observation, dict()
 
 
-    # TODO: Actually build the step() function
+    def step(self, action):
+        gymEnvObs, reward, terminated, truncated, info = super().step(action)
+
+        # Update PacMan location
+        pacNodeIndex, ghostNodesIndicies = self.getAgentsNodes()
+        newPacNodeIndex, newGhostNodesIndicies = self.parseGymEnvObs(gymEnvObs)
+
+        # Remove old PacMan and ghost Position in Graph
+        self.nodes[pacNodeIndex][4] = 0
+        self.environmentNXGraph.nodes[pacNodeIndex]["features"] = self.nodes[pacNodeIndex]
+        for oldGhost in ghostNodesIndicies:
+            self.nodes[oldGhost][3] = 0
+            self.environmentNXGraph.nodes[oldGhost]["features"] = self.nodes[oldGhost]
+        
+        # Add new PacMan and Ghost position
+        self.nodes[newPacNodeIndex][4] = 1
+        self.environmentNXGraph.nodes[newPacNodeIndex]["features"] = self.nodes[newPacNodeIndex]
+        for newGhost in newGhostNodesIndicies:
+            self.nodes[newGhost][3] = 1
+            self.environmentNXGraph.nodes[newGhost]["features"] = self.nodes[newGhost]
+
+        # Eat Food/Pellet/Capsule
+        self.nodes[newPacNodeIndex][1] = 0
+        self.nodes[newPacNodeIndex][2] = 0
+
+        observation = dict({
+            "nodes": self.nodes,
+            "edges": self.edges,
+            "edge_features": self.edge_features
+        })
+
+        return observation, reward, terminated, truncated, info
+
 
 
     
@@ -202,7 +199,7 @@ class GraphEnv(ge.GymEnv):
     
     #endregion
 
-    # TODO: Implement the gym to nx graph conversion function
+    
     def gymGraphToNXGraph(self):
         G = nx.MultiDiGraph()
 
@@ -226,6 +223,50 @@ class GraphEnv(ge.GymEnv):
         nx.draw_networkx_labels(G, pos, font_size=10) #Label font size
         plt.gca().set_aspect("equal") #keep equal square porpotions so it resembles pacman game
         plt.show()
+
+    # Function to convert the observation from gymenv.py to changes in graph
+    def parseGymEnvObs(self, gymEnvObs):
+        #Translate x, y coordinates to nodes
+        newPacNodeIndex = None
+        newGhostNodeIndicies = []
+
+        newPacNodeX = gymEnvObs["agent"][0]
+        newPacNodeY = gymEnvObs["agent"][1]
+        newGhostPosList = gymEnvObs["ghosts"].reshape(-1, 2)
+        for node in self.nodes:
+            if node[5] == newPacNodeX and node[6] == newPacNodeY:
+                newPacNodeIndex = np.where(self.nodes == node)[0]
+            
+            for ghostPos in newGhostPosList:
+                if node[5] == ghostPos[0] and node[6] == ghostPos[1]:
+                    newGhostNodeIndicies.append(np.where(self.node == node)[0]) 
+        
+        return newPacNodeIndex, newGhostPosList
+        
+        
+
+        
+
+    def getAgentsNodes(self):
+        pacNodeIndex = None
+        ghostNodesIndices = []
+        for node in self.nodes:
+            if node[4] == 1:
+                pacNodeIndex = np.where(self.nodes == node)[0]
+            
+            if node[3] == 1:
+                ghostNodesIndices.append(np.where(self.nodes == node)[0])
+        
+        return pacNodeIndex, ghostNodesIndices
+    
+    
+    #def getNodeOutgoingEdges(self, nodeIndex):
+    #    list_of_outgoing_edges = []
+    #    for edge in self.edges:
+    #        if edge[0] == nodeIndex:
+    #            list_of_outgoing_edges.append(edge)
+    #    
+    #    return list_of_outgoing_edges
 
 
 # Gotta test the __init__ function of the GraphEnv class         
