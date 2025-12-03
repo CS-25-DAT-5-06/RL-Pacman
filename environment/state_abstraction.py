@@ -616,19 +616,7 @@ class StateAbstraction:
                 # Critical (<= 2) or Near (3-5)
                 dist_bucket = 1 if distance <= 2 else 2
                 
-
-        n_closest_ghosts = ghost_distances_and_positions[:n]
-
-        for distance, ghost_position in n_closest_ghosts:
-            direction = self._get_direction(agent_pos, tuple(ghost_position))
-            bucket_number = distance // distance_per_bucket
-            final_bucket = min(bucket_number, 3) # cap at bucket size 
-            ghost_features.append((direction, final_bucket))
-
-        # if fewer ghosts than n exists, pad with dummy
-        while len(ghost_features) < n:
-            dummy_ghost_info = ((0,0), 3) #Dummy, no direction, far away
-            ghost_features.append(dummy_ghost_info)
+                ghost_features.append((direction, dist_bucket))
 
         return tuple(ghost_features)
     
