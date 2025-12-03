@@ -1,5 +1,5 @@
 # experiments/configurations/qlearning_medium_smallGrid.yaml
-experiment_name: "qlearning_none_mediumClassic"
+experiment_name: "qlearning_relative_mediumClassic"
 
 environment:
   layout: "mediumClassic"
@@ -20,7 +20,7 @@ agent:
 
 state_abstraction:
   enabled: true
-  feature_type: "none"
+  feature_type: "relative"
 
 training:
   num_episodes: 5000

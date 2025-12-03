@@ -166,7 +166,7 @@ def run_experiment(config_path):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     experiment_name = config['experiment_name']
     output_base = config['output'].get('base_dir', 'data/experiments')
-    output_dir = os.path.join(output_base, f"{experiment_name}_{timestamp}")
+    output_dir = os.path.join(output_base,f"{timestamp}_{experiment_name}")
     os.makedirs(output_dir, exist_ok=True)
     
     # Save metrics to CSV
