@@ -300,7 +300,7 @@ class StateAbstraction:
         x, y = agent_pos
 
         # infro about 3 closest ghosts, more distance buckets
-        ghost_info = self._get_closest_ghost_info(agent_pos, ghosts, n=3, bucket_size=2)
+        ghost_info = self._get_closest_ghost_info(agent_pos, ghosts, n=3, distance_per_bucket=2)
 
         # food, directional indicators
         food_dirs = self._get_food_directions(agent_pos, food)

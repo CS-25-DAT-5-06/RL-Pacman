@@ -214,9 +214,9 @@ if __name__ == "__main__":
         sys.exit(1)
     
     config_file = sys.argv[1]
-    if not os.path.exists(config_file):
+    if not os.path.exists("experiments/"+ config_file):
         print(f"Error: Configuration file '{config_file}' not found!")
         sys.exit(1)
     
-    output_dir = run_experiment(config_file)
+    output_dir = run_experiment("experiments/"+ config_file)
     print(f"\nResults saved to: {output_dir}")
