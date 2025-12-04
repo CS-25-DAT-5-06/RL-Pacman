@@ -133,6 +133,8 @@ class GymEnv(gym.Env):
         ghosts = [ghostType(i+1) for i in range(self.layout.numGhosts)]
 
         pacman = pm.moduleLoadAgent(PACMAN, False)
+
+
         
         
         if self.render_mode == None:
@@ -181,6 +183,7 @@ class GymEnv(gym.Env):
         return observation, dict()
 
     def step(self, action):
+        info = dict()
 
         #Check if action is in illegal actions
         if self._inv_direction_to_action[action] not in self.game.state.getLegalPacmanActions():          
@@ -208,6 +211,11 @@ class GymEnv(gym.Env):
 
            
             if(self.game.gameOver):
+                if self.game.state.isWin():
+                    info = {"win":True}
+                elif self.game.state.isLose():
+                    info = {"win":False}
+
                 terminated = True
                 self.gameCount += 1     
                 if self.record:
@@ -251,7 +259,7 @@ class GymEnv(gym.Env):
 
         reward = self.game.state.getScore() - prevScore
 
-        return observation, reward, terminated, False, dict()
+        return observation, reward, terminated, False, info
     
     def render(self):
         self.render_mode = "human"
