@@ -5,6 +5,7 @@ from gymnasium.spaces import Graph, Box
 from . import gymenv as ge
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from berkeley_pacman import pacman as pm
 from berkeley_pacman.util import *
 from berkeley_pacman import layout
@@ -24,10 +25,21 @@ RECORDING_PATH = "data/recordings/"
 
 
 class GraphEnv(ge.GymEnv):
-    def __init__(self, layoutName, record=False, record_interval=None, config="/experiments/configurations/default.ini", render_mode=None):
+    def __init__(self, layoutName, record=False, record_interval=None, reward_config=None, render_mode=None):
         #Getting all of the necessary variables initialized just like in gymenv.py
-        super().__init__(layoutName, record, record_interval, config, render_mode)        
+        super().__init__(layoutName, record, record_interval, reward_config, render_mode)        
 
+        if reward_config is None:
+            pm.rewardConfig = {
+            "EAT_FOOD": 10,
+            "EAT_GHOST": 200,
+            "TIME_PENALTY": -1,
+            "WIN": 500,
+            "LOSE": -500,
+            "CAPSULE": 10
+        }
+        else:
+            pm.rewardConfig = reward_config
         # walkable_nodes amount of nodes, 7 feautures each
         # Node Features (id, pellet/food, capsule, ghostAgentPresent, pacmanAgentPresent, trueX, trueY)
         self.nodes, self.edges, self.edge_features = self.createGraphFromLayout()
@@ -55,16 +67,18 @@ class GraphEnv(ge.GymEnv):
             )
         )
 
-
         # Getting the NetworkX version of the graph, for visualization purposes
         self.environmentNXGraph = self.gymGraphToNXGraph()
-        self.visual_of_nodes_and_edges(self.environmentNXGraph)
-
+        #self.visual_of_nodes_and_edges(self.environmentNXGraph)
+        self.fig, self.ax = plt.subplots()
     
 
     
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
+
+        self.nodes, self.edges, self.edge_features = self.createGraphFromLayout()
+        self.environmentNXGraph = self.gymGraphToNXGraph()
 
         observation = dict({
             "nodes": self.nodes,
@@ -224,24 +238,63 @@ class GraphEnv(ge.GymEnv):
         plt.gca().set_aspect("equal") #keep equal square porpotions so it resembles pacman game
         plt.show()
 
-    # Function to convert the observation from gymenv.py to changes in graph
+    def animate_graph(self, frame):
+        """
+        One animation frame:
+        - sample a random action from the action_space
+        - step the GymEnv + update our graph node features
+        - redraw the NetworkX graph with updated Pacman/ghost colors
+        """
+        # Random valid action (0..4). GymEnv will turn illegal moves into STOP.
+        action = int(self.action_space.sample())
+
+        # Step underlying environment; this updates game state
+        observation, reward, terminated, truncated, info = self.step(action)
+
+        # Clear axes and redraw graph
+        self.ax.cla()
+
+        G = self.environmentNXGraph
+        pos = nx.get_node_attributes(G, "pos")
+
+        colors = []
+        for _, data in G.nodes(data=True):
+            features = data["features"]
+            ghostPresent = features[3]
+            pacmanPresent = features[4]
+
+            if pacmanPresent == 1:
+                colors.append("yellow")
+            elif ghostPresent == 1:
+                colors.append("red")
+            else:
+                colors.append("skyblue")
+
+        nx.draw(G, pos, node_color=colors, with_labels=True, node_size=150, ax=self.ax)
+        self.ax.set_aspect("equal")
+
+
+    #Function to convert the observation from gymenv.py to changes in graph
     def parseGymEnvObs(self, gymEnvObs):
-        #Translate x, y coordinates to nodes
         newPacNodeIndex = None
         newGhostNodeIndicies = []
 
         newPacNodeX = gymEnvObs["agent"][0]
         newPacNodeY = gymEnvObs["agent"][1]
         newGhostPosList = gymEnvObs["ghosts"].reshape(-1, 2)
-        for node in self.nodes:
+
+        newPacNodeIndex = None
+        newGhostNodeIndicies = []
+
+        for i, node in enumerate(self.nodes):       
             if node[5] == newPacNodeX and node[6] == newPacNodeY:
-                newPacNodeIndex = np.where(self.nodes == node)[0]
-            
+                newPacNodeIndex = i                
+
             for ghostPos in newGhostPosList:
                 if node[5] == ghostPos[0] and node[6] == ghostPos[1]:
-                    newGhostNodeIndicies.append(np.where(self.node == node)[0]) 
-        
-        return newPacNodeIndex, newGhostPosList
+                    newGhostNodeIndicies.append(i)   
+
+        return newPacNodeIndex, newGhostNodeIndicies 
         
         
 
@@ -250,13 +303,12 @@ class GraphEnv(ge.GymEnv):
     def getAgentsNodes(self):
         pacNodeIndex = None
         ghostNodesIndices = []
-        for node in self.nodes:
+        for i, node in enumerate(self.nodes):
             if node[4] == 1:
-                pacNodeIndex = np.where(self.nodes == node)[0]
-            
+                pacNodeIndex = i
             if node[3] == 1:
-                ghostNodesIndices.append(np.where(self.nodes == node)[0])
-        
+                ghostNodesIndices.append(i)
+
         return pacNodeIndex, ghostNodesIndices
     
     
@@ -271,5 +323,18 @@ class GraphEnv(ge.GymEnv):
 
 # Gotta test the __init__ function of the GraphEnv class         
 if __name__ == "__main__":
-    testObj = GraphEnv(layoutName="originalClassic")
+    env = GraphEnv(layoutName="originalClassic")
 
+    # Reset once to initialize everything
+    obs, info = env.reset()
+
+    # Create a Matplotlib figure and start the animation
+    ani = animation.FuncAnimation(
+        env.fig,              # <-- use the same figure created in __init__
+        env.animate_graph,
+        frames=500,
+        interval=200,
+        repeat=False
+    )
+
+    plt.show()
