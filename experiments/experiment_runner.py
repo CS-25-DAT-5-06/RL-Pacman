@@ -12,6 +12,8 @@ from environment.gymenv import GymEnv
 from agents.qlearning_agent import QLearningAgent
 from environment.state_abstraction import StateAbstraction
 
+from torch.utils.tensorboard import SummaryWriter
+
 
 def load_config(config_path):
     """Load YAML configuration file"""
@@ -43,6 +45,7 @@ def run_experiment(config_path):
     """
     Run experiment based on config file
     """
+    
 
     config = load_config(config_path)
 
@@ -54,6 +57,9 @@ def run_experiment(config_path):
     print(f"Episodes: {config['training']['num_episodes']}")
     print(f"State Abstraction: {config['state_abstraction']['feature_type']}")
     print("#" * 69)
+
+    
+    writer = SummaryWriter(log_dir=config['output']['base_dir'] + "/runs")
 
 
     # Setup environment with reward config
@@ -139,6 +145,12 @@ def run_experiment(config_path):
             'avg_q_value': avg_q,
             'q_table_size': q_table_size
         })
+
+        
+        writer.add_scalar('steps',episode_steps,episode+1)
+        writer.add_scalar('epsilon',agent.epsilon,episode+1)
+        writer.add_scalar('avg_q_value',avg_q,episode+1)
+        writer.add_scalar('q_table_size',q_table_size,episode+1)
         
         # Print progress
         if (episode + 1) % print_interval == 0:
@@ -153,6 +165,9 @@ def run_experiment(config_path):
                   f"Epsilon: {agent.epsilon:.4f} | "
                   f"Q-table: {q_table_size:6d} states | "
                   f"Avg Q: {avg_q:6.2f}")
+            
+            writer.add_scalar('avg_reward',avg_reward, (episode + 1) // print_interval)
+            writer.add_scalar('win_rate',win_rate, (episode + 1) // print_interval)
     
     env.close()
 

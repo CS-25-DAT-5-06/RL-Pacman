@@ -23,7 +23,7 @@ state_abstraction:
   feature_type: "relative_grid"
 
 training:
-  num_episodes: 5000
+  num_episodes: 1000
 
 output:
   base_dir: "data/experiments"
