@@ -319,9 +319,9 @@ class GraphEnv(ge.GymEnv):
 if __name__ == "__main__":
     env = GraphEnv(layoutName="originalClassic")
 
-    #Reset once to initialize everything to start
+    #Reset once to initialize everything 
     obs, info = env.reset()
 
-    #Create a Matplotlib figure and start the animation
-    ani = animation.FuncAnimation(env.fig, frames=500, interval=200, repeat=False)
+    #Create the matplotlib figure and start the animation
+    ani = animation.FuncAnimation(env.fig, env.animate_graph, frames=500, interval=200, repeat=False)
     plt.show()
