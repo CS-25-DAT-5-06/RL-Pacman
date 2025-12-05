@@ -67,7 +67,7 @@ class GraphEnv(ge.GymEnv):
             )
         )
 
-        # Getting the NetworkX version of the graph, for visualization purposes
+        #Getting the NetworkX version of the graph, for visualization purposes
         self.environmentNXGraph = self.gymGraphToNXGraph()
         #self.visual_of_nodes_and_edges(self.environmentNXGraph)
         self.fig, self.ax = plt.subplots()
@@ -147,7 +147,7 @@ class GraphEnv(ge.GymEnv):
         edge_link_list, edge_features_list = self.connectNodesToSurroundingNodes(node_list)
                     
         
-        # All of this computing... just to make it into a NumPy array for more computing :)
+        #All of this computing... just to make it into a NumPy array for more computing :)
         return np.array(node_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
 
 
@@ -239,19 +239,13 @@ class GraphEnv(ge.GymEnv):
         plt.show()
 
     def animate_graph(self, frame):
-        """
-        One animation frame:
-        - sample a random action from the action_space
-        - step the GymEnv + update our graph node features
-        - redraw the NetworkX graph with updated Pacman/ghost colors
-        """
-        # Random valid action (0..4). GymEnv will turn illegal moves into STOP.
+        #Random valid action (0..4). 
         action = int(self.action_space.sample())
 
-        # Step underlying environment; this updates game state
+        #Step underlying environment; this updates game state
         observation, reward, terminated, truncated, info = self.step(action)
 
-        # Clear axes and redraw graph
+        #Use ax instead
         self.ax.cla()
 
         G = self.environmentNXGraph
@@ -271,7 +265,7 @@ class GraphEnv(ge.GymEnv):
                 colors.append("skyblue")
 
         nx.draw(G, pos, node_color=colors, with_labels=True, node_size=150, ax=self.ax)
-        self.ax.set_aspect("equal")
+        self.ax.set_aspect("equal") #Get it ax instead of clear
 
 
     #Function to convert the observation from gymenv.py to changes in graph
@@ -321,20 +315,13 @@ class GraphEnv(ge.GymEnv):
     #    return list_of_outgoing_edges
 
 
-# Gotta test the __init__ function of the GraphEnv class         
+#Gotta test the __init__ function of the GraphEnv class         
 if __name__ == "__main__":
     env = GraphEnv(layoutName="originalClassic")
 
-    # Reset once to initialize everything
+    #Reset once to initialize everything to start
     obs, info = env.reset()
 
-    # Create a Matplotlib figure and start the animation
-    ani = animation.FuncAnimation(
-        env.fig,              # <-- use the same figure created in __init__
-        env.animate_graph,
-        frames=500,
-        interval=200,
-        repeat=False
-    )
-
+    #Create a Matplotlib figure and start the animation
+    ani = animation.FuncAnimation(env.fig, frames=500, interval=200, repeat=False)
     plt.show()
