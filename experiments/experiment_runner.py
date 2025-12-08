@@ -132,7 +132,7 @@ def run_experiment(config_path):
         agent.decay_epsilon()
         
         # Track metrics
-        win = 1 if episode_reward > 0 else 0
+        win = 1 if info['win'] > 0 else 0
         avg_q = agent.get_average_q_value()
         q_table_size = len(agent.q_table)
         
@@ -143,7 +143,8 @@ def run_experiment(config_path):
             'win': win,
             'epsilon': agent.epsilon,
             'avg_q_value': avg_q,
-            'q_table_size': q_table_size
+            'q_table_size': q_table_size,
+            'score': info['score']
         })
 
         
@@ -188,7 +189,7 @@ def run_experiment(config_path):
     csv_path = os.path.join(output_dir, "metrics.csv")
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
-            'episode', 'reward', 'steps', 'win', 'epsilon', 'avg_q_value', 'q_table_size'
+            'episode', 'reward', 'steps', 'win', 'epsilon', 'avg_q_value', 'q_table_size', 'score'
         ])
         writer.writeheader()
         writer.writerows(metrics)

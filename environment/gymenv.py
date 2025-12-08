@@ -212,9 +212,11 @@ class GymEnv(gym.Env):
            
             if(self.game.gameOver):
                 if self.game.state.isWin():
-                    info = {"win":True}
+                    info = {"win":True,
+                            "score": self.game.state.getGameScore()}
                 elif self.game.state.isLose():
-                    info = {"win":False}
+                    info = {"win":False,
+                            "score": self.game.state.getGameScore()}
 
                 terminated = True
                 self.gameCount += 1     

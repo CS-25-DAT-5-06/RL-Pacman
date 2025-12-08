@@ -181,6 +181,9 @@ class GameState:
 
     def getScore(self):
         return float(self.data.score)
+    
+    def getGameScore(self):
+        return float(self.data.gameScore)
 
     def getCapsules(self):
         """
@@ -281,6 +284,8 @@ TIME_PENALTY = 1  # Number of points lost each round
 
 rewardConfig = None
 
+
+
 class ClassicGameRules:
     """
     These game rules manage the control flow of a game, deciding when
@@ -312,6 +317,7 @@ class ClassicGameRules:
         initState.initialize(layout, len(ghostAgents))
         game = Game(agents, horizon, display, self, catchExceptions=catchExceptions)
         game.state = initState
+        game.state.data.gameScore
         self.initialState = initState.deepCopy()
         self.quiet = quiet
         return game
@@ -403,6 +409,7 @@ class PacmanRules:
         x, y = position
         # Eat food
         if state.data.food[x][y]:
+            state.data.gameScore += 10
             if rewardConfig == None:
                 state.data.scoreChange += 10
             else:
@@ -422,10 +429,12 @@ class PacmanRules:
         if(position in state.getCapsules()):
             state.data.capsules.remove(position)
             state.data._capsuleEaten = position
+            state.data.gameScore += 50
             if rewardConfig != None and 'CAPSULE' in rewardConfig:
                 state.data.scoreChange += rewardConfig['CAPSULE']
             # Reset all ghosts' scared timers
             for index in range(1, len(state.data.agentStates)):
+                state.data.killMultiplier = 1
                 state.data.agentStates[index].scaredTimer = SCARED_TIME
     consume = staticmethod(consume)
 
@@ -494,6 +503,8 @@ class GhostRules:
 
     def collide(state, ghostState, agentIndex):
         if ghostState.scaredTimer > 0:
+            state.data.gameScore += state.data.killMultiplier*200
+            state.data.killMultiplier = 2*state.data.killMultiplier
             if rewardConfig == None:
                 state.data.scoreChange += 200
             else:

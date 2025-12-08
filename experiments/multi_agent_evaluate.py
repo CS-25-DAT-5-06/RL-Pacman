@@ -3,6 +3,7 @@ import argparse
 import os
 import sys
 import csv
+import operator as op
 
 
 parser = argparse.ArgumentParser(description="Evaluate a trained Pacman agent")
@@ -25,17 +26,22 @@ for directory in os.listdir(args.experiment_dir):
     if os.path.isdir(relpath) and "config.yaml" in os.listdir(relpath) and "q_table.pkl" in os.listdir(relpath):
         
         print(f"evaluating: {directory}")
-        win_rate, avg_reward =  evaluate(relpath,args.episodes,args.render,args.delay)
+        win_rate, avg_reward, avg_score =  evaluate(relpath,args.episodes,args.render,args.delay)
         eval_result.append({
             'experiment': directory,
             'win_rate': win_rate,
-            'avg_reward': avg_reward
+            'avg_reward': avg_reward,
+            'avg_score': avg_score
         })
 
-csv_path = os.path.join(args.experiment_dir, f"evaluation_{args.episodes}e.csv")
+num_of_prev_experiments = len([e for e in os.listdir(args.experiment_dir) if op.contains(e,f"evaluation_{args.episodes}")])
+
+file_name = f"evaluation_{args.episodes}e({num_of_prev_experiments}).csv"
+csv_path = os.path.join(args.experiment_dir, file_name)
+
 with open(csv_path, 'w', newline='') as f:
     writer = csv.DictWriter(f, fieldnames=[
-        'experiment','win_rate','avg_reward'
+        'experiment','win_rate','avg_reward', 'avg_score'
     ])
     writer.writeheader()
     writer.writerows(eval_result)
