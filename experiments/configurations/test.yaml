@@ -25,12 +25,12 @@ agent:
 #  feature_type: "relative_crisis_bfs" # Now includes Hunt Mode + Last Action + BFS Navigation
 
 training:
-  num_episodes: 500      # Extended training
-  eval_interval: 100
+  num_episodes: 1000      # Extended training
+  eval_interval: 50
   eval_episodes: 10
 
 output:
   base_dir: "data/experiments"
   save_q_table: true
   save_metrics: true
-  print_interval: 100
+  print_interval: 50

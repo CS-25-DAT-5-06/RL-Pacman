@@ -85,7 +85,7 @@ def run_experiment(config_path):
 
         #Set up agent (Unchanged from experiment_runner expect NaiveGraohQLearningAgent)
     agent = NaiveGraphQLearningAgent(
-        action_space_size=4,  # E, N, W, S (STOP removed)
+        action_space_size=5,  # E, N, W, S (STOP removed)
         learning_rate=config['agent']['learning_rate'],
         discount_factor=config['agent']['discount_factor'],
         epsilon=config['agent']['epsilon'],
