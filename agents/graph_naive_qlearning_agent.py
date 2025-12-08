@@ -6,7 +6,7 @@ from collections import defaultdict
 class NaiveGraphQLearningAgent:
     def __init__(
         self,
-        action_space_size=4,
+        action_space_size=5, #Change action space to 5 because Berkley Pacman has 5 possible actions. later change so we remove stop entirely, temp fix
         learning_rate=0.1,
         discount_factor=0.9,
         epsilon=1.0,
@@ -51,14 +51,10 @@ class NaiveGraphQLearningAgent:
         legalActions, pacNodeId = self.extractPacState(stateGraph)
 
         # Epsilon-greedy action selection:
-        if np.random.random() < epsilon:    # Generates random number between 0 and 1, as epsilon decays, less random actions.
-            # Explore: Random Action
-            foundAction = False
-            while True: #We gamble till we pull a legal action
-                randInt = np.random.randint(self.action_space_size)
-                for action in legalActions:
-                    if action == randInt:
-                        return randInt
+        if np.random.random() < epsilon:
+            if len(legalActions) == 0:
+                return np.random.randint(self.action_space_size)  # <-- emergency fallback
+            return np.random.choice(legalActions)
 
         else:
             # Exploit: best action according to q-values
@@ -94,7 +90,7 @@ class NaiveGraphQLearningAgent:
             done: episode terminated?
         """
         __, pacNodeId = self.extractPacState(stateGraph) 
-
+        #print("DEBUG Q row length:", len(self.q_table[tuple(stateGraph["nodes"][pacNodeId])]),"Action:", action)
         current_q = self.q_table[tuple(stateGraph["nodes"][pacNodeId])][action]
 
         if done:
@@ -103,7 +99,8 @@ class NaiveGraphQLearningAgent:
         else:
             # Bellman equation: current reward 0 discounted max future Q
             # Temporal difference learning
-            max_next_q = np.max(self.q_table[tuple(next_stateGraph["nodes"][pacNodeId])])
+            _, nextPacNodeId = self.extractPacState(next_stateGraph)
+            max_next_q = np.max(self.q_table[tuple(next_stateGraph["nodes"][nextPacNodeId])])
             target_q = reward + self.gamma * max_next_q
 
         # Q-learning update
@@ -144,23 +141,30 @@ class NaiveGraphQLearningAgent:
 
     def extractPacState(self, stateGraph):
         pacNodeIndex = 0
-        edgeIndexCounter = 0
         edgeIndicies = []
 
         legalActions = []
-        for node in stateGraph["nodes"]: #Searching for PacNode
+
+        #print("First 10 edges:", stateGraph["edges"][:10])
+        for i, node in enumerate(stateGraph["nodes"]): #Searching for PacNode
+            #print("Checking this nodee;", node) #Prints every node that we check
+            
             if node[4] == 1: # PacNode found
-                pacNodeIndex = node[0] #Save nodeId/nodeIndex
+                pacNodeIndex = i #Save nodeId/nodeIndex
+                #print("Pacman is at node:", node) #Confirm that acutally find pacman node
+
+                edgeIndexCounter = 0
+
                 for edge in stateGraph["edges"]: #Looking after the outgoing edges the node is connected to
-                    if edge[0] == node[0]: # If found
-                        edgeIndicies.append(edgeIndexCounter) #Add edge index to list
+                    if edge[0] == node[0] or edge[1] == node[0]: #If found, add the action ( basically the direction) for this edge
+                         legalActions.append(stateGraph["edge_features"][edgeIndexCounter][0]) #Add edge index to list
                     edgeIndexCounter += 1
                 
                 for edge in edgeIndicies: # Go through all edges the node is connected to and add their direction to the list of legal actions
-                    legalActions.append(stateGraph["edge_features"][0]) 
+                    legalActions.append(stateGraph["edge_features"][edge]) 
             
-            break
-
+                break
+            
         return legalActions, pacNodeIndex
     
     
