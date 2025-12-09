@@ -1,7 +1,7 @@
 import numpy as np
 import pickle
 from collections import defaultdict
-from graph_naive_qlearning_agent import NaiveGraphQLearningAgent
+from . import NaiveGraphQLearningAgent
 
 class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
     def __init__(self, action_space_size=5, learning_rate=0.1, discount_factor=0.9, epsilon=1, epsilon_decay=0.995, epsilon_min=0.01, hops_prune_limit=4):
