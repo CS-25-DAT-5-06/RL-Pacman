@@ -20,15 +20,16 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
         __, pacNodeIndex = self.extractPacState(stateGraph)
 
         #Find what out what pacman is connected too
-        pacOutgoinfEdges = self.findOutgoingEdgesConnectedFromNode(stateGraph=stateGraph, nodeId=pacNodeIndex)
+        pacOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(stateGraph=stateGraph, nodeId=pacNodeIndex)
         
         #Look for ghost in hopsPruneLimit nodes
-        for pacEdge in pacOutgoinfEdges:
+        for pacEdge in pacOutgoingEdges:
             #Checking for ghosts in immediate vicinity
             pacEdgeDestinationNode = stateGraph["edges"][pacEdge][1]
             foundGhostOnPath = self.checkNodePathsForGhosts(stateGraph=stateGraph, nodeToCheckId=pacEdgeDestinationNode, hopNumber=0) # Check for ghost present on the PacEdge path and beyond
             if foundGhostOnPath == True:
                 stateGraph["edge_feature"][pacEdge][0] = -1 # Invalidate / Cut-Off edge as legal 
+
         
         return stateGraph
 
