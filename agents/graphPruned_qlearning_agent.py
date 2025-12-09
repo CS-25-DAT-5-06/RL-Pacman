@@ -27,10 +27,10 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
             #Checking for ghosts in immediate vicinity
             pacEdgeDestinationNode = stateGraph["edges"][pacEdge][1]
             foundGhostOnPath = self.checkNodePathsForGhosts(stateGraph=stateGraph, nodeToCheckId=pacEdgeDestinationNode, hopNumber=0) # Check for ghost present on the PacEdge path and beyond
-            if foundGhostOnPath == True:
-                stateGraph["edge_feature"][pacEdge][0] = -1 # Invalidate / Cut-Off edge as legal 
 
-        
+            #print(stateGraph.keys())
+            if foundGhostOnPath == True:
+                stateGraph["edge_features"][pacEdge][0] = -1 # Invalidate / Cut-Off edge as legal 
         return stateGraph
 
 
@@ -49,11 +49,6 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
                     self.checkNodePathsForGhosts(stateGraph=stateGraph, nodeToCheckId=nextNodeToCheckId, hopNumber=hopNumber)
         
         return False
-        
-
-
-
-
     
     def findOutgoingEdgesConnectedFromNode(self, stateGraph, nodeId):
         edgeIndexList = []
