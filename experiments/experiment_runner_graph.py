@@ -68,7 +68,7 @@ def run_experiment(config_path):
     reward_config = create_reward_config_dict(config['environment']['rewards'])
     env = GraphEnv(
         layoutName=(config['environment']['layout']), #
-        render_mode=None,
+        render_mode="human",
         reward_config=reward_config,
         #record=config['output'].get('record_games', False), #We dont have recording in graph enviroment yet, so we comment this until we do
         #record_interval=config['output'].get('record_interval', 10)
@@ -104,7 +104,7 @@ def run_experiment(config_path):
             epsilon=config['agent']['epsilon'],
             epsilon_decay=config['agent']['epsilon_decay'],
             epsilon_min=config['agent']['epsilon_min'],
-            hops_prune_limit=4
+            hops_prune_limit=10
         )
 
 
@@ -152,6 +152,7 @@ def run_experiment(config_path):
         
         # Track metrics
         win = 1 if episode_reward > 0 else 0
+        countableWin = 1 if info["winState"] == True else 0
         avg_q = agent.get_average_q_value()
         q_table_size = len(agent.q_table)
         
@@ -160,6 +161,7 @@ def run_experiment(config_path):
             'reward': episode_reward,
             'steps': episode_steps,
             'win': win,
+            'countableWin': countableWin,
             'epsilon': agent.epsilon,
             'avg_q_value': avg_q,
             'q_table_size': q_table_size
@@ -176,11 +178,13 @@ def run_experiment(config_path):
             recent_metrics = metrics[-print_interval:]
             avg_reward = sum(m['reward'] for m in recent_metrics) / len(recent_metrics)
             win_rate = sum(m['win'] for m in recent_metrics) / len(recent_metrics)
+            countable_win_rate = sum(m['countableWin'] for m in recent_metrics) / len(recent_metrics)
             
             print(f"Episode {episode + 1:4d}/{config['training']['num_episodes']} | "
                   f"Reward: {episode_reward:6.1f} | "
                   f"Avg Reward: {avg_reward:6.1f} | "
                   f"Win Rate: {win_rate:.2f} | "
+                  f"Countable Win Rate: {countable_win_rate:.2f} | "
                   f"Epsilon: {agent.epsilon:.4f} | "
                   f"Q-table: {q_table_size:6d} states | "
                   f"Avg Q: {avg_q:6.2f}")
@@ -207,7 +211,7 @@ def run_experiment(config_path):
     csv_path = os.path.join(output_dir, "metrics.csv")
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
-            'episode', 'reward', 'steps', 'win', 'epsilon', 'avg_q_value', 'q_table_size'
+            'episode', 'reward', 'steps', 'win', 'countableWin', 'epsilon', 'avg_q_value', 'q_table_size'
         ])
         writer.writeheader()
         writer.writerows(metrics)

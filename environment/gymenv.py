@@ -73,6 +73,7 @@ class GymEnv(gym.Env):
         else:
             self.record_interval = 0
         self.gameCount = 0
+        self.gameWin = False
 
         if record:
             import time
@@ -209,7 +210,9 @@ class GymEnv(gym.Env):
            
             if(self.game.gameOver):
                 terminated = True
-                self.gameCount += 1     
+                self.gameCount += 1
+                if bool(self.game.state.isWin()): # Keeping track of winning games
+                    self.gameWin = True
                 if self.record:
                     if(self.gameCount % self.record_interval == 0):
                         import pickle
@@ -222,6 +225,7 @@ class GymEnv(gym.Env):
             terminated = False
         
         currState = self.game.state
+        
 
 
 
@@ -251,7 +255,7 @@ class GymEnv(gym.Env):
 
         reward = self.game.state.getScore() - prevScore
 
-        return observation, reward, terminated, False, dict()
+        return observation, reward, terminated, False, dict({"winState": self.gameWin})
     
     def render(self):
         self.render_mode = "human"
