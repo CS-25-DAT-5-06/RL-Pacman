@@ -10,7 +10,8 @@ import csv
 from datetime import datetime
 
 from environment.gymenv_graph import GraphEnv
-from agents.graphPruned_qlearning_agent import GraphPrunedQLearningAgent    
+from agents.graph_naive_qlearning_agent import NaiveGraphQLearningAgent
+from agents.graphPruned_qlearning_agent import GraphPrunedQLearningAgent     
 #from environment.state_abstraction import StateAbstraction #comment for now
 
 from torch.utils.tensorboard import SummaryWriter
@@ -83,15 +84,28 @@ def run_experiment(config_path):
     )
     """
 
-        #Set up agent (Unchanged from experiment_runner expect NaiveGraohQLearningAgent)
-    agent = GraphPrunedQLearningAgent(
-        action_space_size=5,  # E, N, W, S (STOP removed)
-        learning_rate=config['agent']['learning_rate'],
-        discount_factor=config['agent']['discount_factor'],
-        epsilon=config['agent']['epsilon'],
-        epsilon_decay=config['agent']['epsilon_decay'],
-        epsilon_min=config['agent']['epsilon_min']
-    )
+    #Set up agent (Unchanged from experiment_runner expect NaiveGraohQLearningAgent)
+    if config["graphAgent"]["type"] == "naive":
+        print("Going graph/naive")
+        agent = NaiveGraphQLearningAgent(
+            action_space_size=5,  # E, N, W, S (STOP removed)
+            learning_rate=config['agent']['learning_rate'],
+            discount_factor=config['agent']['discount_factor'],
+            epsilon=config['agent']['epsilon'],
+            epsilon_decay=config['agent']['epsilon_decay'],
+            epsilon_min=config['agent']['epsilon_min']
+        )
+    elif config["graphAgent"]["type"] == "pruned":
+        print("Going graph/pruned")
+        agent = GraphPrunedQLearningAgent(
+            action_space_size=5,  # E, N, W, S (STOP removed)
+            learning_rate=config['agent']['learning_rate'],
+            discount_factor=config['agent']['discount_factor'],
+            epsilon=config['agent']['epsilon'],
+            epsilon_decay=config['agent']['epsilon_decay'],
+            epsilon_min=config['agent']['epsilon_min'],
+            hops_prune_limit=4
+        )
 
 
      # Training setup
