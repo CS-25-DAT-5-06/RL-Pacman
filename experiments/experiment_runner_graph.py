@@ -10,7 +10,7 @@ import csv
 from datetime import datetime
 
 from environment.gymenv_graph import GraphEnv
-from agents.graph_naive_qlearning_agent import NaiveGraphQLearningAgent 
+from agents.graphPruned_qlearning_agent import GraphPrunedQLearningAgent    
 #from environment.state_abstraction import StateAbstraction #comment for now
 
 from torch.utils.tensorboard import SummaryWriter
@@ -84,7 +84,7 @@ def run_experiment(config_path):
     """
 
         #Set up agent (Unchanged from experiment_runner expect NaiveGraohQLearningAgent)
-    agent = NaiveGraphQLearningAgent(
+    agent = GraphPrunedQLearningAgent(
         action_space_size=5,  # E, N, W, S (STOP removed)
         learning_rate=config['agent']['learning_rate'],
         discount_factor=config['agent']['discount_factor'],

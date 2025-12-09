@@ -156,7 +156,7 @@ class NaiveGraphQLearningAgent:
                 edgeIndexCounter = 0
 
                 for edge in stateGraph["edges"]: #Looking after the outgoing edges the node is connected to
-                    if edge[0] == node[0] or edge[1] == node[0]: #If found, add the action ( basically the direction) for this edge
+                    if edge[0] == node[0]: #If found, add the action ( basically the direction) for this edge
                         if stateGraph["edge_features"][edgeIndexCounter][0] != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
                             legalActions.append(stateGraph["edge_features"][edgeIndexCounter][0]) #Add edge index to list
                     edgeIndexCounter += 1

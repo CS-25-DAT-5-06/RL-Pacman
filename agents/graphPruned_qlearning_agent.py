@@ -17,7 +17,7 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
         
 
     def pruneStateGraph(self, stateGraph):
-        __, pacNodeIndex = self.extractPacState()
+        __, pacNodeIndex = self.extractPacState(stateGraph)
 
         #Find what out what pacman is connected too
         pacOutgoinfEdges = self.findOutgoingEdgesConnectedFromNode(stateGraph=stateGraph, nodeId=pacNodeIndex)
