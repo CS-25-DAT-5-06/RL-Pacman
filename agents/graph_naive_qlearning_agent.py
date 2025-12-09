@@ -90,7 +90,7 @@ class NaiveGraphQLearningAgent:
             done: episode terminated?
         """
         __, pacNodeId = self.extractPacState(stateGraph) 
-        #print("DEBUG Q row length:", len(self.q_table[tuple(stateGraph["nodes"][pacNodeId])]),"Action:", action)
+        print("DEBUG Q row length:", len(self.q_table[tuple(stateGraph["nodes"][pacNodeId])]),"Action:", action)
         current_q = self.q_table[tuple(stateGraph["nodes"][pacNodeId])][action]
 
         if done:
@@ -156,7 +156,7 @@ class NaiveGraphQLearningAgent:
                 edgeIndexCounter = 0
 
                 for edge in stateGraph["edges"]: #Looking after the outgoing edges the node is connected to
-                    if edge[0] == node[0] or edge[1] == node[0]: #If found, add the action ( basically the direction) for this edge
+                    if edge[0] == node[0]: #If found, add the action ( basically the direction) for this edge
                          legalActions.append(stateGraph["edge_features"][edgeIndexCounter][0]) #Add edge index to list
                     edgeIndexCounter += 1
                 
