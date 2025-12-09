@@ -13,7 +13,7 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
         # Start off by checking distances and prune graph paths where the ghost is too close
         prunedStateGraph = self.pruneStateGraph(stateGraph)
         
-        super().get_action(prunedStateGraph, training=training)
+        return super().get_action(prunedStateGraph, training=training)
         
 
     def pruneStateGraph(self, stateGraph):
