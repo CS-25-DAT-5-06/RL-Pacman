@@ -12,9 +12,9 @@ import time
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from environment.gymenv import GymEnv
-from agents.qlearning_agent import QLearningAgent
-from environment.state_abstraction import StateAbstraction
+from environment.gymenv_graph import GraphEnv
+from agents.graphPruned_qlearning_agent import GraphPrunedQLearningAgent
+#from environment.state_abstraction import StateAbstraction
 
 def load_config(config_path):
     with open(config_path, 'r') as f:
@@ -51,13 +51,13 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
     reward_config = create_reward_config_dict(config['environment']['rewards'])
     render_mode = "human" if render else None
     
-    env = GymEnv(
+    env = GraphEnv(
         layoutName=(config['environment']['layout']),
         render_mode=render_mode,
         reward_config=reward_config,
         record=False # Don't record during evaluation by default
     )
-    
+    """
     # Setup State Abstraction
     abstractor = StateAbstraction(
         grid_width=env.layout.width,
@@ -65,15 +65,16 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
         walls=env.layout.walls,
         feature_type=config['state_abstraction']['feature_type']
     )
-    
+    """
     # Setup Agent
-    agent = QLearningAgent(
-        action_space_size=4,
+    agent = GraphPrunedQLearningAgent(
+        action_space_size=5,
         learning_rate=0, # No learning during evaluation
         discount_factor=config['agent']['discount_factor'],
         epsilon=0,       # Greedy policy
         epsilon_decay=0,
-        epsilon_min=0
+        epsilon_min=0,
+        hops_prune_limit=4
     )
     
     # Load Q-table
@@ -90,21 +91,28 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
     
     for i in range(num_episodes):
         obs, info = env.reset()
+        state = obs
         last_action = None
-        state = abstractor.extract_state(obs, last_action)
+
+        #state = abstractor.extract_state(obs, last_action)
+
         done = False
         episode_reward = 0
         steps = 0
-        
+
         while not done:
             if render:
                 time.sleep(delay)
+
                 
             action = agent.get_action(state, training=False)
-            next_obs, reward, terminated, truncated, info = env.step(action + 1)
-            
+            next_obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
-            next_state = abstractor.extract_state(next_obs, action)
+
+            print(f"Agent action: {env._inv_direction_to_action[action]}")
+
+            next_state = next_obs
+
             state = next_state
             last_action = action
             episode_reward += reward
