@@ -157,14 +157,14 @@ class NaiveGraphQLearningAgent:
         for i, node in enumerate(grpahDict["nodes"]): #Searching for PacNode
             #print("Checking this nodee;", node) #Prints every node that we check
             
-            if node[4] == 1: # PacNode found
+            if node[3] == 1: # PacNode found
                 pacNodeIndex = i #Save nodeId/nodeIndex
                 #print("Pacman is at node:", node) #Confirm that acutally find pacman node
 
                 edgeIndexCounter = 0
 
                 for edge in grpahDict["edges"]: #Looking after the outgoing edges the node is connected to
-                    if edge[0] == node[0]: #If found, add the action ( basically the direction) for this edge
+                    if edge[0] == i: #If found, add the action ( basically the direction) for this edge
                         if grpahDict["edge_features"][edgeIndexCounter][0] != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
                             legalActions.append(grpahDict["edge_features"][edgeIndexCounter][0]) #Add edge index to list
                     edgeIndexCounter += 1
