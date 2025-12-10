@@ -39,7 +39,7 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
 
     def checkNodePathsForGhosts(self, graphDict, nodeToCheckId, hopNumber):
         if hopNumber < self.hopsPruneLimit: #Check that we are within our hops limit
-            if graphDict["nodes"][nodeToCheckId][3] == 1: #Check ghost pressence
+            if graphDict["nodes"][nodeToCheckId][2] == 1: #Check ghost pressence
                 return True
             else:
                 #We find out which nodes this one is connected to and hop to those

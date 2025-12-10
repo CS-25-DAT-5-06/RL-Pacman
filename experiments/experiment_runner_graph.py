@@ -68,7 +68,7 @@ def run_experiment(config_path):
     reward_config = create_reward_config_dict(config['environment']['rewards'])
     env = GraphEnv(
         layoutName=(config['environment']['layout']),
-        render_mode="human", # Should make this paramater controllable via terminal
+        render_mode=None, # Should make this paramater controllable via terminal
         reward_config=reward_config,
         #record=config['output'].get('record_games', False), #We dont have recording in graph enviroment yet, so we comment this until we do
         #record_interval=config['output'].get('record_interval', 10)
