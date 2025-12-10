@@ -26,7 +26,7 @@ agent:
 #  feature_type: "relative_crisis_bfs" # Now includes Hunt Mode + Last Action + BFS Navigation
 
 graphAgent:
-  type: "pruned"
+  type: "naive"
 
 training:
   num_episodes: 1000      # Extended training

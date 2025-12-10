@@ -94,7 +94,7 @@ def run_experiment(config_path):
             epsilon=config['agent']['epsilon'],
             epsilon_decay=config['agent']['epsilon_decay'],
             epsilon_min=config['agent']['epsilon_min'],
-            hops_prune_limit=10
+            hops_prune_limit=4
         )
 
 

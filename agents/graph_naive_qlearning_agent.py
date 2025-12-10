@@ -54,31 +54,28 @@ class NaiveGraphQLearningAgent:
         if np.random.random() < epsilon:
             if len(legalActions) == 0:
                 print("Emergency fallback for get_action triggered")
-                fallbackAction = 0
-                while fallbackAction != 0: # Cant be pulling the STOP action
-                    fallbackAction = np.random.randint(self.action_space_size)  # <-- emergency fallback
-                return fallbackAction
-            return np.random.choice(legalActions)
+                # choose any non-STOP action uniformly
+                non_stop_actions = [a for a in range(1, self.action_space_size)]
+                return int(np.random.choice(non_stop_actions))
+            return int(np.random.choice(legalActions))
 
         else:
-            # Exploit: best action according to q-values
+            # Exploit: best (legal) action according to q-values
             # Tuple format of state serves as the key in the Q-table, then you can give it an action (as an index) and then see the Q-value of that action
             # Transforming the node space of the graph into a tuple of tuples, makes it possible to use as a unique key in the Q-table. Perfect for representing states.
             state = self.getGraphAsState(graphDict=graphDict)
             q_values = self.q_table[state] #array of four numbers, q-value for each of the four actions
             
-            maximum = np.max(q_values)
-
-            equalValueActionList = []
-            # We loop through all actions and add those who are equal to the max q-value action of the state
-            for action in range(0, len(q_values)):
-                if q_values[action] == maximum:
-                    equalValueActionList.append(action)
-
-            equalValueActionList = np.array(equalValueActionList)
+            # Trying to constrain the max_q choice to only legal actions
+            if len(legalActions) == 0:
+                # fallback to full action-space argmax if no legal actions found
+                candidates = np.flatnonzero(q_values == np.max(q_values))
+            else:
+                max_q = max(q_values[a] for a in legalActions)
+                candidates = [a for a in legalActions if q_values[a] == max_q]
 
             #returns a random choice between the arguments with the indices storing maximum values 
-            return np.random.choice(equalValueActionList)
+            return int(np.random.choice(candidates))
         
 
     def update(self, graphDict, action, reward, next_graphDict, done):
@@ -95,7 +92,6 @@ class NaiveGraphQLearningAgent:
             next_state: Next state after taking action
             done: episode terminated?
         """
-        __, pacNodeId = self.extractPacState(graphDict) 
         
         state = self.getGraphAsState(graphDict=graphDict)
         current_q = self.q_table[state][action]
@@ -106,9 +102,13 @@ class NaiveGraphQLearningAgent:
         else:
             # Bellman equation: current reward 0 discounted max future Q
             # Temporal difference learning
-            _, nextPacNodeId = self.extractPacState(next_graphDict)
             next_state = self.getGraphAsState(graphDict=next_graphDict)
-            max_next_q = np.max(self.q_table[next_state])
+            next_legal_actions, _ = self.extractPacState(next_graphDict) 
+            # Use only legal next actions to compute max_next_q
+            if len(next_legal_actions) == 0:
+                max_next_q = 0.0
+            else:
+                max_next_q = max(self.q_table[next_state][legalAction] for legalAction in next_legal_actions)
             target_q = reward + self.gamma * max_next_q
 
         # Q-learning update
@@ -177,8 +177,13 @@ class NaiveGraphQLearningAgent:
         return legalActions, pacNodeIndex
     
     def getGraphAsState(self, graphDict):
-        # Makes the node space from the graph hashable for beign used as unique keys in Q-table
-        return tuple(map(tuple, graphDict["nodes"]))
+        # Makes the graph hashable for beign used as unique keys in Q-table
+        # include nodes, edges and edge_features so different connectivity states are distinct
+        # Downside of this setup is that now the Q-table entries will be map specific, so curricular learning will no longer work
+        nodes_t = tuple(map(tuple, graphDict["nodes"]))
+        edges_t = tuple(map(tuple, graphDict["edges"]))
+        edge_features_t = tuple(map(tuple, graphDict["edge_features"]))
+        return (nodes_t, edges_t, edge_features_t)
     
     
     def save(self, filepath):
