@@ -54,9 +54,9 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
                 #We find out which nodes this one is connected to and hop to those
                 nodeOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(graphDict=graphDict, nodeId=nodeToCheckId)
                 for edgeIndex in nodeOutgoingEdges:
-                    hopNumber += 1
                     nextNodeToCheckId = graphDict["edges"][edgeIndex][1]
-                    self.checkNodePathsForGhosts(graphDict=graphDict, nodeToCheckId=nextNodeToCheckId, hopNumber=hopNumber)
+                    if self.checkNodePathsForGhosts(graphDict=graphDict, nodeToCheckId=nextNodeToCheckId, hopNumber=hopNumber+1):
+                        return True
         
         return False
     
@@ -65,7 +65,7 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
         node = graphDict["nodes"][nodeId]
 
         for i, edge in enumerate(graphDict["edges"]):
-            if edge[0] == node[0]:
+            if edge[0] == int(nodeId):
                 edgeIndexList.append(i)
 
         return edgeIndexList
