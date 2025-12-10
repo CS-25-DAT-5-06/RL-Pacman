@@ -31,7 +31,7 @@ class NaiveGraphQLearningAgent:
 
     
     
-    def get_action(self, stateGraph, training=True):
+    def get_action(self, graphDict, training=True):
         """
         Selects an using epsilon-greedy policy
             state: Current state
@@ -48,18 +48,22 @@ class NaiveGraphQLearningAgent:
             epsilon = self.epsilon
 
         #Get legal actions an the node pacman is on
-        legalActions, pacNodeId = self.extractPacState(stateGraph)
+        legalActions, pacNodeId = self.extractPacState(graphDict)
 
         # Epsilon-greedy action selection:
         if np.random.random() < epsilon:
             if len(legalActions) == 0:
-                return np.random.randint(self.action_space_size)  # <-- emergency fallback
+                print("Emergency fallback for get_action triggered")
+                fallbackAction = 0
+                while fallbackAction != 0: # Cant be pulling the STOP action
+                    fallbackAction = np.random.randint(self.action_space_size)  # <-- emergency fallback
+                return fallbackAction
             return np.random.choice(legalActions)
 
         else:
             # Exploit: best action according to q-values
             # Tuple format of state serves as the key in the Q-table, then you can give it an action (as an index) and then see the Q-value of that action
-            q_values = self.q_table[tuple(stateGraph["nodes"][pacNodeId])] #array of four numbers, q-value for each of the four actions
+            q_values = self.q_table[tuple(graphDict["nodes"][pacNodeId])] #array of four numbers, q-value for each of the four actions
             
             maximum = max(q_values)
 
@@ -75,7 +79,7 @@ class NaiveGraphQLearningAgent:
             return np.random.choice(equalValueActionList)
         
 
-    def update(self, stateGraph, action, reward, next_stateGraph, done):
+    def update(self, graphDict, action, reward, next_graphDict, done):
         """
         Update gets called every single action agent takes in the environment
         Update Q-value using the Q-learning update rule
@@ -89,9 +93,9 @@ class NaiveGraphQLearningAgent:
             next_state: Next state after taking action
             done: episode terminated?
         """
-        __, pacNodeId = self.extractPacState(stateGraph) 
+        __, pacNodeId = self.extractPacState(graphDict) 
         #print("DEBUG Q row length:", len(self.q_table[tuple(stateGraph["nodes"][pacNodeId])]),"Action:", action)
-        current_q = self.q_table[tuple(stateGraph["nodes"][pacNodeId])][action]
+        current_q = self.q_table[tuple(graphDict["nodes"][pacNodeId])][action]
 
         if done:
             # No future rewards if episode ended
@@ -99,13 +103,13 @@ class NaiveGraphQLearningAgent:
         else:
             # Bellman equation: current reward 0 discounted max future Q
             # Temporal difference learning
-            _, nextPacNodeId = self.extractPacState(next_stateGraph)
-            max_next_q = np.max(self.q_table[tuple(next_stateGraph["nodes"][nextPacNodeId])])
+            _, nextPacNodeId = self.extractPacState(next_graphDict)
+            max_next_q = np.max(self.q_table[tuple(next_graphDict["nodes"][nextPacNodeId])])
             target_q = reward + self.gamma * max_next_q
 
         # Q-learning update
         new_q = current_q + self.alpha * (target_q - current_q)
-        self.q_table[tuple(stateGraph["nodes"][pacNodeId])][action] = new_q
+        self.q_table[tuple(graphDict["nodes"][pacNodeId])][action] = new_q
 
         self.total_steps += 1
 
@@ -139,14 +143,14 @@ class NaiveGraphQLearningAgent:
         return total_q / total_entries if total_entries > 0 else 0.0
 
 
-    def extractPacState(self, stateGraph):
+    def extractPacState(self, grpahDict):
         pacNodeIndex = 0
         edgeIndicies = []
 
         legalActions = []
 
         #print("First 10 edges:", stateGraph["edges"][:10])
-        for i, node in enumerate(stateGraph["nodes"]): #Searching for PacNode
+        for i, node in enumerate(grpahDict["nodes"]): #Searching for PacNode
             #print("Checking this nodee;", node) #Prints every node that we check
             
             if node[4] == 1: # PacNode found
@@ -155,18 +159,22 @@ class NaiveGraphQLearningAgent:
 
                 edgeIndexCounter = 0
 
-                for edge in stateGraph["edges"]: #Looking after the outgoing edges the node is connected to
+                for edge in grpahDict["edges"]: #Looking after the outgoing edges the node is connected to
                     if edge[0] == node[0]: #If found, add the action ( basically the direction) for this edge
-                        if stateGraph["edge_features"][edgeIndexCounter][0] != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
-                            legalActions.append(stateGraph["edge_features"][edgeIndexCounter][0]) #Add edge index to list
+                        if grpahDict["edge_features"][edgeIndexCounter][0] != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
+                            legalActions.append(grpahDict["edge_features"][edgeIndexCounter][0]) #Add edge index to list
                     edgeIndexCounter += 1
                 
                 for edge in edgeIndicies: # Go through all edges the node is connected to and add their direction to the list of legal actions
-                    legalActions.append(stateGraph["edge_features"][edge]) 
+                    legalActions.append(grpahDict["edge_features"][edge]) 
             
                 break
             
         return legalActions, pacNodeIndex
+    
+    def getGraphAsState(graphDict):
+        # Makes the node space from the graph hashable for beign used as unique keys in Q-table
+        return tuple(map(tuple, graphDict["nodes"]))
     
     
     def save(self, filepath):
