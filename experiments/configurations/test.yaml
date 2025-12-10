@@ -5,6 +5,7 @@ experiment_name: "qlearning_relative_crisis_optimized_originalClassic"
 
 environment:
   layout: "originalClassic"
+  render_mode: "human"
   rewards:
     time_penalty: -2      # Encourages speed
     eat_food: 20          # Strong incentive to eat
