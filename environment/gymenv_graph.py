@@ -104,22 +104,22 @@ class GraphEnv(ge.GymEnv):
         newPacNodeIndex, newGhostNodesIndicies = self.parseGymEnvObs(gymEnvObs)
 
         # Remove old PacMan and ghost Position in Graph
-        self.nodes[pacNodeIndex][nodeEnum.PACMAN_AGENT_PRESENT] = 0
+        self.nodes[pacNodeIndex][nodeEnum.PACMAN_AGENT_PRESENT.value] = 0
         self.environmentNXGraph.nodes[pacNodeIndex]["features"] = self.nodes[pacNodeIndex]
         for oldGhost in ghostNodesIndicies:
-            self.nodes[oldGhost][nodeEnum.GHOST_AGENT_PRESENT] = 0
+            self.nodes[oldGhost][nodeEnum.GHOST_AGENT_PRESENT.value] = 0
             self.environmentNXGraph.nodes[oldGhost]["features"] = self.nodes[oldGhost]
         
         # Add new PacMan and Ghost position
-        self.nodes[newPacNodeIndex][nodeEnum.PACMAN_AGENT_PRESENT] = 1
+        self.nodes[newPacNodeIndex][nodeEnum.PACMAN_AGENT_PRESENT.value] = 1
         self.environmentNXGraph.nodes[newPacNodeIndex]["features"] = self.nodes[newPacNodeIndex]
         for newGhost in newGhostNodesIndicies:
-            self.nodes[newGhost][nodeEnum.GHOST_AGENT_PRESENT] = 1
+            self.nodes[newGhost][nodeEnum.GHOST_AGENT_PRESENT.value] = 1
             self.environmentNXGraph.nodes[newGhost]["features"] = self.nodes[newGhost]
 
         # Eat Food/Pellet/Capsule
-        self.nodes[newPacNodeIndex][nodeEnum.FOOD] = 0
-        self.nodes[newPacNodeIndex][nodeEnum.CAPSULE] = 0
+        self.nodes[newPacNodeIndex][nodeEnum.FOOD.value] = 0
+        self.nodes[newPacNodeIndex][nodeEnum.CAPSULE.value] = 0
 
         observation = dict({
             "nodes": self.nodes,
@@ -163,7 +163,7 @@ class GraphEnv(ge.GymEnv):
         node_list = node_list_xy_removed  
         
         #All of this computing... just to make it into a NumPy array for more computing :)
-        return np.array(node_list, dtype=np.int64), np.array(node_list_xy_removed, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
+        return np.array(node_list, dtype=np.int64), np.array(node_xy_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
 
 
     def checkCapsulePresence(self, xCoordinate, yCoordinate):
@@ -269,8 +269,8 @@ class GraphEnv(ge.GymEnv):
         colors = []
         for _, data in G.nodes(data=True):
             features = data["features"]
-            ghostPresent = features[nodeEnum.GHOST_AGENT_PRESENT]
-            pacmanPresent = features[nodeEnum.PACMAN_AGENT_PRESENT]
+            ghostPresent = features[nodeEnum.GHOST_AGENT_PRESENT.value]
+            pacmanPresent = features[nodeEnum.PACMAN_AGENT_PRESENT.value]
 
             if pacmanPresent == 1:
                 colors.append("yellow")
