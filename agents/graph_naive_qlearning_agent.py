@@ -63,9 +63,11 @@ class NaiveGraphQLearningAgent:
         else:
             # Exploit: best action according to q-values
             # Tuple format of state serves as the key in the Q-table, then you can give it an action (as an index) and then see the Q-value of that action
-            q_values = self.q_table[tuple(graphDict["nodes"][pacNodeId])] #array of four numbers, q-value for each of the four actions
+            # Transforming the node space of the graph into a tuple of tuples, makes it possible to use as a unique key in the Q-table. Perfect for representing states.
+            state = self.getGraphAsState(graphDict=graphDict)
+            q_values = self.q_table[state] #array of four numbers, q-value for each of the four actions
             
-            maximum = max(q_values)
+            maximum = np.max(q_values)
 
             equalValueActionList = []
             # We loop through all actions and add those who are equal to the max q-value action of the state
@@ -94,8 +96,9 @@ class NaiveGraphQLearningAgent:
             done: episode terminated?
         """
         __, pacNodeId = self.extractPacState(graphDict) 
-        #print("DEBUG Q row length:", len(self.q_table[tuple(stateGraph["nodes"][pacNodeId])]),"Action:", action)
-        current_q = self.q_table[tuple(graphDict["nodes"][pacNodeId])][action]
+        
+        state = self.getGraphAsState(graphDict=graphDict)
+        current_q = self.q_table[state][action]
 
         if done:
             # No future rewards if episode ended
@@ -104,12 +107,13 @@ class NaiveGraphQLearningAgent:
             # Bellman equation: current reward 0 discounted max future Q
             # Temporal difference learning
             _, nextPacNodeId = self.extractPacState(next_graphDict)
-            max_next_q = np.max(self.q_table[tuple(next_graphDict["nodes"][nextPacNodeId])])
+            next_state = self.getGraphAsState(graphDict=next_graphDict)
+            max_next_q = np.max(self.q_table[next_state])
             target_q = reward + self.gamma * max_next_q
 
         # Q-learning update
         new_q = current_q + self.alpha * (target_q - current_q)
-        self.q_table[tuple(graphDict["nodes"][pacNodeId])][action] = new_q
+        self.q_table[state][action] = new_q
 
         self.total_steps += 1
 
@@ -172,7 +176,7 @@ class NaiveGraphQLearningAgent:
             
         return legalActions, pacNodeIndex
     
-    def getGraphAsState(graphDict):
+    def getGraphAsState(self, graphDict):
         # Makes the node space from the graph hashable for beign used as unique keys in Q-table
         return tuple(map(tuple, graphDict["nodes"]))
     
