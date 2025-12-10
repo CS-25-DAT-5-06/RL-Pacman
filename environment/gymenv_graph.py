@@ -6,6 +6,7 @@ from . import gymenv as ge
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from enum import Enum
 from berkeley_pacman import pacman as pm
 from berkeley_pacman.util import *
 from berkeley_pacman import layout
@@ -23,6 +24,11 @@ PACMAN = "KeyboardAgent"
 
 RECORDING_PATH = "data/recordings/"
 
+class nodeEnum(Enum):
+    FOOD = 0
+    CAPSULE = 1
+    GHOST_AGENT_PRESENT = 2
+    PACMAN_AGENT_PRESENT = 3
 
 class GraphEnv(ge.GymEnv):
     def __init__(self, layoutName, record=False, record_interval=None, reward_config=None, render_mode=None):
@@ -41,8 +47,8 @@ class GraphEnv(ge.GymEnv):
         else:
             pm.rewardConfig = reward_config
         # walkable_nodes amount of nodes, 7 feautures each
-        # Node Features (id, pellet/food, capsule, ghostAgentPresent, pacmanAgentPresent, trueX, trueY)
-        self.nodes, self.edges, self.edge_features = self.createGraphFromLayout()
+        # OLD Node Features (id, pellet/food, capsule, ghostAgentPresent, pacmanAgentPresent, trueX, trueY)
+        self.nodes, self.nodesXY, self.edges, self.edge_features = self.createGraphFromLayout()
 
         #np.set_printoptions(threshold=sys.maxsize)
         #print(f"Nodes:  {self.nodes}")
@@ -77,11 +83,12 @@ class GraphEnv(ge.GymEnv):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
 
-        self.nodes, self.edges, self.edge_features = self.createGraphFromLayout()
+        self.nodes, self.nodesXY, self.edges, self.edge_features = self.createGraphFromLayout()
         self.environmentNXGraph = self.gymGraphToNXGraph()
 
         observation = dict({
             "nodes": self.nodes,
+            "nodesXY": self.nodesXY,
             "edges": self.edges,
             "edge_features": self.edge_features
         })
@@ -97,25 +104,26 @@ class GraphEnv(ge.GymEnv):
         newPacNodeIndex, newGhostNodesIndicies = self.parseGymEnvObs(gymEnvObs)
 
         # Remove old PacMan and ghost Position in Graph
-        self.nodes[pacNodeIndex][4] = 0
+        self.nodes[pacNodeIndex][nodeEnum.PACMAN_AGENT_PRESENT.value] = 0
         self.environmentNXGraph.nodes[pacNodeIndex]["features"] = self.nodes[pacNodeIndex]
         for oldGhost in ghostNodesIndicies:
-            self.nodes[oldGhost][3] = 0
+            self.nodes[oldGhost][nodeEnum.GHOST_AGENT_PRESENT.value] = 0
             self.environmentNXGraph.nodes[oldGhost]["features"] = self.nodes[oldGhost]
         
         # Add new PacMan and Ghost position
-        self.nodes[newPacNodeIndex][4] = 1
+        self.nodes[newPacNodeIndex][nodeEnum.PACMAN_AGENT_PRESENT.value] = 1
         self.environmentNXGraph.nodes[newPacNodeIndex]["features"] = self.nodes[newPacNodeIndex]
         for newGhost in newGhostNodesIndicies:
-            self.nodes[newGhost][3] = 1
+            self.nodes[newGhost][nodeEnum.GHOST_AGENT_PRESENT.value] = 1
             self.environmentNXGraph.nodes[newGhost]["features"] = self.nodes[newGhost]
 
         # Eat Food/Pellet/Capsule
-        self.nodes[newPacNodeIndex][1] = 0
-        self.nodes[newPacNodeIndex][2] = 0
+        self.nodes[newPacNodeIndex][nodeEnum.FOOD.value] = 0
+        self.nodes[newPacNodeIndex][nodeEnum.CAPSULE.value] = 0
 
         observation = dict({
             "nodes": self.nodes,
+            "nodesXY": self.nodesXY,
             "edges": self.edges,
             "edge_features": self.edge_features
         })
@@ -132,6 +140,7 @@ class GraphEnv(ge.GymEnv):
         walkable_nodes = 0
 
         node_list = []
+        node_xy_list = []
         edge_link_list = []
         edge_features_list = []
 
@@ -143,12 +152,18 @@ class GraphEnv(ge.GymEnv):
                     ghostAgentPresent, pacmanAgentPresent = self.checkAgentPresence(x, y)
 
                     node_list.append([walkable_nodes - 1, self.layout.food[x][y], capsulePresent, ghostAgentPresent, pacmanAgentPresent, x, y])
+                    node_xy_list.append([x, y])
 
         edge_link_list, edge_features_list = self.connectNodesToSurroundingNodes(node_list)
-                    
+
+        node_list_xy_removed = []
+        for node in node_list:
+            node_list_xy_removed.append([node[1], node[2], node[3], node[4]])
+        
+        node_list = node_list_xy_removed  
         
         #All of this computing... just to make it into a NumPy array for more computing :)
-        return np.array(node_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
+        return np.array(node_list, dtype=np.int64), np.array(node_xy_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
 
 
     def checkCapsulePresence(self, xCoordinate, yCoordinate):
@@ -172,7 +187,7 @@ class GraphEnv(ge.GymEnv):
         return ghostPresent, pacmanPresent
 
 
-
+    #TODO: This is a very hacky function from when the x,y coordinates was still in the nodes
     def connectNodesToSurroundingNodes(self, nodeList):
         running_edge_link_list = []
         running_edge_feature_list = []
@@ -219,10 +234,10 @@ class GraphEnv(ge.GymEnv):
 
         #Starting by adding nodes with their features. Generating labels from their x, y values.
         for i, features in enumerate(self.nodes):
-            nodeId = self.nodes[i][0]
-            nodeX = self.nodes[i][5]
-            nodeY = self.nodes[i][6]
-            nodeLabel = f"({nodeId}, ({nodeX}, {nodeY}))"
+            nodeIndex = i
+            nodeX = self.nodesXY[i][0]
+            nodeY = self.nodesXY[i][1]
+            nodeLabel = f"({nodeIndex}, ({nodeX}, {nodeY}))"
             G.add_node(i, features=features, pos=(nodeX, nodeY), label=nodeLabel)
 
         for i, (u, v) in enumerate(self.edges):
@@ -254,8 +269,8 @@ class GraphEnv(ge.GymEnv):
         colors = []
         for _, data in G.nodes(data=True):
             features = data["features"]
-            ghostPresent = features[3]
-            pacmanPresent = features[4]
+            ghostPresent = features[nodeEnum.GHOST_AGENT_PRESENT.value]
+            pacmanPresent = features[nodeEnum.PACMAN_AGENT_PRESENT.value]
 
             if pacmanPresent == 1:
                 colors.append("yellow")
@@ -280,12 +295,12 @@ class GraphEnv(ge.GymEnv):
         newPacNodeIndex = None
         newGhostNodeIndicies = []
 
-        for i, node in enumerate(self.nodes):       
-            if node[5] == newPacNodeX and node[6] == newPacNodeY:
+        for i, nodeXY in enumerate(self.nodesXY):       
+            if nodeXY[0] == newPacNodeX and nodeXY[1] == newPacNodeY:
                 newPacNodeIndex = i                
 
             for ghostPos in newGhostPosList:
-                if node[5] == ghostPos[0] and node[6] == ghostPos[1]:
+                if nodeXY[0] == ghostPos[0] and nodeXY[1] == ghostPos[1]:
                     newGhostNodeIndicies.append(i)   
 
         return newPacNodeIndex, newGhostNodeIndicies 
@@ -298,9 +313,9 @@ class GraphEnv(ge.GymEnv):
         pacNodeIndex = None
         ghostNodesIndices = []
         for i, node in enumerate(self.nodes):
-            if node[4] == 1:
-                pacNodeIndex = i
             if node[3] == 1:
+                pacNodeIndex = i
+            if node[2] == 1:
                 ghostNodesIndices.append(i)
 
         return pacNodeIndex, ghostNodesIndices

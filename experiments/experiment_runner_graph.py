@@ -10,7 +10,8 @@ import csv
 from datetime import datetime
 
 from environment.gymenv_graph import GraphEnv
-from agents.graph_naive_qlearning_agent import NaiveGraphQLearningAgent 
+from agents.graph_naive_qlearning_agent import NaiveGraphQLearningAgent
+from agents.graphPruned_qlearning_agent import GraphPrunedQLearningAgent     
 #from environment.state_abstraction import StateAbstraction #comment for now
 
 from torch.utils.tensorboard import SummaryWriter
@@ -66,32 +67,35 @@ def run_experiment(config_path):
     # Setup environment with reward config
     reward_config = create_reward_config_dict(config['environment']['rewards'])
     env = GraphEnv(
-        layoutName=(config['environment']['layout']), #
-        render_mode=None,
+        layoutName=(config['environment']['layout']),
+        render_mode=(config['environment']['render_mode']), # Should make this paramater controllable via terminal
         reward_config=reward_config,
         #record=config['output'].get('record_games', False), #We dont have recording in graph enviroment yet, so we comment this until we do
         #record_interval=config['output'].get('record_interval', 10)
     )
 
-    """
-    # Setup state abstraction
-    abstractor = StateAbstraction(
-        grid_width=env.layout.width,
-        grid_height=env.layout.height,
-        walls=env.layout.walls,
-        feature_type=config['state_abstraction']['feature_type']
-    )
-    """
-
-        #Set up agent (Unchanged from experiment_runner expect NaiveGraohQLearningAgent)
-    agent = NaiveGraphQLearningAgent(
-        action_space_size=5,  # E, N, W, S (STOP removed)
-        learning_rate=config['agent']['learning_rate'],
-        discount_factor=config['agent']['discount_factor'],
-        epsilon=config['agent']['epsilon'],
-        epsilon_decay=config['agent']['epsilon_decay'],
-        epsilon_min=config['agent']['epsilon_min']
-    )
+    #Set up agent (Unchanged from experiment_runner expect NaiveGraohQLearningAgent)
+    if config["graphAgent"]["type"] == "naive":
+        print("Going graph/naive")
+        agent = NaiveGraphQLearningAgent(
+            action_space_size=5,  # E, N, W, S (STOP removed)
+            learning_rate=config['agent']['learning_rate'],
+            discount_factor=config['agent']['discount_factor'],
+            epsilon=config['agent']['epsilon'],
+            epsilon_decay=config['agent']['epsilon_decay'],
+            epsilon_min=config['agent']['epsilon_min']
+        )
+    elif config["graphAgent"]["type"] == "pruned":
+        print("Going graph/pruned")
+        agent = GraphPrunedQLearningAgent(
+            action_space_size=5,  # E, N, W, S (STOP removed)
+            learning_rate=config['agent']['learning_rate'],
+            discount_factor=config['agent']['discount_factor'],
+            epsilon=config['agent']['epsilon'],
+            epsilon_decay=config['agent']['epsilon_decay'],
+            epsilon_min=config['agent']['epsilon_min'],
+            hops_prune_limit=10
+        )
 
 
      # Training setup
@@ -105,9 +109,6 @@ def run_experiment(config_path):
     for episode in range(config['training']['num_episodes']):
         obs, info = env.reset()
         state = obs #define state here as well
-        last_action = None
-
-        
         
         episode_reward = 0
         episode_steps = 0
@@ -129,7 +130,6 @@ def run_experiment(config_path):
             #Check again, this should work now our state is the entire graph now (which is given by obs)
             state = next_state
 
-            last_action = action
             episode_reward += reward
             episode_steps += 1
         
@@ -138,6 +138,7 @@ def run_experiment(config_path):
         
         # Track metrics
         win = 1 if episode_reward > 0 else 0
+        countableWin = 1 if info["winState"] == True else 0
         avg_q = agent.get_average_q_value()
         q_table_size = len(agent.q_table)
         
@@ -146,6 +147,7 @@ def run_experiment(config_path):
             'reward': episode_reward,
             'steps': episode_steps,
             'win': win,
+            'countableWin': countableWin,
             'epsilon': agent.epsilon,
             'avg_q_value': avg_q,
             'q_table_size': q_table_size
@@ -162,11 +164,13 @@ def run_experiment(config_path):
             recent_metrics = metrics[-print_interval:]
             avg_reward = sum(m['reward'] for m in recent_metrics) / len(recent_metrics)
             win_rate = sum(m['win'] for m in recent_metrics) / len(recent_metrics)
+            countable_win_rate = sum(m['countableWin'] for m in recent_metrics) / len(recent_metrics)
             
             print(f"Episode {episode + 1:4d}/{config['training']['num_episodes']} | "
                   f"Reward: {episode_reward:6.1f} | "
                   f"Avg Reward: {avg_reward:6.1f} | "
                   f"Win Rate: {win_rate:.2f} | "
+                  f"Countable Win Rate: {countable_win_rate:.2f} | "
                   f"Epsilon: {agent.epsilon:.4f} | "
                   f"Q-table: {q_table_size:6d} states | "
                   f"Avg Q: {avg_q:6.2f}")
@@ -193,7 +197,7 @@ def run_experiment(config_path):
     csv_path = os.path.join(output_dir, "metrics.csv")
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
-            'episode', 'reward', 'steps', 'win', 'epsilon', 'avg_q_value', 'q_table_size'
+            'episode', 'reward', 'steps', 'win', 'countableWin', 'epsilon', 'avg_q_value', 'q_table_size'
         ])
         writer.writeheader()
         writer.writerows(metrics)
