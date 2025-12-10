@@ -67,22 +67,12 @@ def run_experiment(config_path):
     # Setup environment with reward config
     reward_config = create_reward_config_dict(config['environment']['rewards'])
     env = GraphEnv(
-        layoutName=(config['environment']['layout']), #
-        render_mode="human",
+        layoutName=(config['environment']['layout']),
+        render_mode=(config['environment']['render_mode']), # Should make this paramater controllable via terminal
         reward_config=reward_config,
         #record=config['output'].get('record_games', False), #We dont have recording in graph enviroment yet, so we comment this until we do
         #record_interval=config['output'].get('record_interval', 10)
     )
-
-    """
-    # Setup state abstraction
-    abstractor = StateAbstraction(
-        grid_width=env.layout.width,
-        grid_height=env.layout.height,
-        walls=env.layout.walls,
-        feature_type=config['state_abstraction']['feature_type']
-    )
-    """
 
     #Set up agent (Unchanged from experiment_runner expect NaiveGraohQLearningAgent)
     if config["graphAgent"]["type"] == "naive":
@@ -119,9 +109,6 @@ def run_experiment(config_path):
     for episode in range(config['training']['num_episodes']):
         obs, info = env.reset()
         state = obs #define state here as well
-        last_action = None
-
-        
         
         episode_reward = 0
         episode_steps = 0
@@ -143,7 +130,6 @@ def run_experiment(config_path):
             #Check again, this should work now our state is the entire graph now (which is given by obs)
             state = next_state
 
-            last_action = action
             episode_reward += reward
             episode_steps += 1
         

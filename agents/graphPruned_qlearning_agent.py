@@ -9,53 +9,53 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
         self.hopsPruneLimit = hops_prune_limit
 
 
-    def get_action(self, stateGraph, training=True):
+    def get_action(self, graphDict, training=True):
         # Start off by checking distances and prune graph paths where the ghost is too close
         if training == True:
-            prunedStateGraph = self.pruneStateGraph(stateGraph)
+            prunedGraphDict = self.pruneStateGraph(graphDict=graphDict)
         
-        return super().get_action(prunedStateGraph, training=training)
+        return super().get_action(prunedGraphDict, training=training)
         
 
-    def pruneStateGraph(self, stateGraph):
-        __, pacNodeIndex = self.extractPacState(stateGraph)
+    def pruneStateGraph(self, graphDict):
+        __, pacNodeIndex = self.extractPacState(graphDict)
 
         #Find what out what pacman is connected too
-        pacOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(stateGraph=stateGraph, nodeId=pacNodeIndex)
+        pacOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(graphDict=graphDict, nodeId=pacNodeIndex)
         
         #Look for ghost in hopsPruneLimit nodes
         for pacEdge in pacOutgoingEdges:
             #Checking for ghosts in immediate vicinity
-            pacEdgeDestinationNode = stateGraph["edges"][pacEdge][1]
-            foundGhostOnPath = self.checkNodePathsForGhosts(stateGraph=stateGraph, nodeToCheckId=pacEdgeDestinationNode, hopNumber=0) # Check for ghost present on the PacEdge path and beyond
+            pacEdgeDestinationNode = graphDict["edges"][pacEdge][1]
+            foundGhostOnPath = self.checkNodePathsForGhosts(graphDict=graphDict, nodeToCheckId=pacEdgeDestinationNode, hopNumber=0) # Check for ghost present on the PacEdge path and beyond
 
             #print(stateGraph.keys())
             if foundGhostOnPath == True:
-                stateGraph["edge_features"][pacEdge][0] = -1 # Invalidate / Cut-Off edge as legal 
-        return stateGraph
+                graphDict["edge_features"][pacEdge][0] = -1 # Invalidate / Cut-Off edge as legal 
+        return graphDict
 
 
         
 
-    def checkNodePathsForGhosts(self, stateGraph, nodeToCheckId, hopNumber):
+    def checkNodePathsForGhosts(self, graphDict, nodeToCheckId, hopNumber):
         if hopNumber < self.hopsPruneLimit: #Check that we are within our hops limit
-            if stateGraph["nodes"][nodeToCheckId][3] == 1: #Check ghost pressence
+            if graphDict["nodes"][nodeToCheckId][2] == 1: #Check ghost pressence
                 return True
             else:
                 #We find out which nodes this one is connected to and hop to those
-                nodeOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(stateGraph=stateGraph, nodeId=nodeToCheckId)
+                nodeOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(graphDict=graphDict, nodeId=nodeToCheckId)
                 for edgeIndex in nodeOutgoingEdges:
                     hopNumber += 1
-                    nextNodeToCheckId = stateGraph["edges"][edgeIndex][1]
-                    self.checkNodePathsForGhosts(stateGraph=stateGraph, nodeToCheckId=nextNodeToCheckId, hopNumber=hopNumber)
+                    nextNodeToCheckId = graphDict["edges"][edgeIndex][1]
+                    self.checkNodePathsForGhosts(graphDict=graphDict, nodeToCheckId=nextNodeToCheckId, hopNumber=hopNumber)
         
         return False
     
-    def findOutgoingEdgesConnectedFromNode(self, stateGraph, nodeId):
+    def findOutgoingEdgesConnectedFromNode(self, graphDict, nodeId):
         edgeIndexList = []
-        node = stateGraph["nodes"][nodeId]
+        node = graphDict["nodes"][nodeId]
 
-        for i, edge in enumerate(stateGraph["edges"]):
+        for i, edge in enumerate(graphDict["edges"]):
             if edge[0] == node[0]:
                 edgeIndexList.append(i)
 

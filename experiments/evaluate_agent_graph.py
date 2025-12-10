@@ -85,8 +85,7 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
     
     for i in range(num_episodes):
         obs, info = env.reset()
-        state = obs
-        last_action = None
+
         done = False
         episode_reward = 0
         steps = 0
@@ -100,7 +99,6 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
             next_obs, reward, terminated, truncated, info = env.step(action)
             
             done = terminated or truncated
-            last_action = action
             episode_reward += reward
             steps += 1
             
