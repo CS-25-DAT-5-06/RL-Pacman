@@ -108,6 +108,49 @@ def run_experiment(config_path):
     # Training loop
     for episode in range(config['training']['num_episodes']):
         obs, info = env.reset()
+        #####DEBUG REGION START#####
+        import numpy as np
+        print("env._direction_to_action:", env._direction_to_action)
+        print("env._inv_direction_to_action:", env._inv_direction_to_action)
+
+        # Agent belief from graph observation
+        pac_legal, pac_idx = agent.extractPacState(obs)
+        print("pacNodeIndex:", pac_idx, "agent_legal_from_graph (ints):", pac_legal, 
+              "agent_legal_named:", [env._inv_direction_to_action[a] for a in pac_legal])
+
+        # Show outgoing edges for pac node: (edge_idx, action_int, action_name, (u,v), dest_coord, wall_at_dest)
+        pac_edges = []
+        for ei, (edge, feat) in enumerate(zip(obs["edges"], obs["edge_features"])):
+            if int(edge[0]) == int(pac_idx):
+                action_int = int(feat[0])
+                action_name = env._inv_direction_to_action.get(action_int, str(action_int))
+                dest = int(edge[1])
+                dest_coord = tuple(obs["nodesXY"][dest])
+                # Check layout/wall if available
+                wall_at_dest = None
+                try:
+                    wall_at_dest = bool(env.layout.walls[dest_coord[0]][dest_coord[1]])
+                except Exception:
+                    wall_at_dest = "unknown"
+                pac_edges.append((ei, action_int, action_name, (int(edge[0]), dest), dest_coord, wall_at_dest))
+
+        print("pac_edges:", pac_edges)
+
+        # Print environment's legal moves from game state
+        env_legal_dirs = env.game.state.getLegalPacmanActions()
+        env_legal = [env._direction_to_action[d] for d in env_legal_dirs]
+        print("env_legal (ints):", env_legal, "env_legal_named:", env_legal_dirs)
+
+        # Also print pac node coords and node features for context
+        print("pac node coords:", tuple(obs["nodesXY"][pac_idx]), "pac node features:", tuple(obs["nodes"][pac_idx]))
+
+        print("shares_memory edges/env.edges:", np.shares_memory(obs["edges"], env.edges))
+        print("shares_memory edge_features/env.edge_features:", np.shares_memory(obs["edge_features"], env.edge_features))
+        print("ids: obs_edges", id(obs["edges"]), "env.edges", id(env.edges))
+        ######DEBUG REGION END######
+
+
+
         state = obs #define state here as well
         
         episode_reward = 0

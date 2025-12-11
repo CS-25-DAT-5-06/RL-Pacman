@@ -148,9 +148,7 @@ class NaiveGraphQLearningAgent:
 
 
     def extractPacState(self, grpahDict):
-        pacNodeIndex = 0
-        edgeIndicies = []
-
+        pacNodeIndex = None
         legalActions = []
 
         #print("First 10 edges:", stateGraph["edges"][:10])
@@ -164,16 +162,16 @@ class NaiveGraphQLearningAgent:
                 edgeIndexCounter = 0
 
                 for edge in grpahDict["edges"]: #Looking after the outgoing edges the node is connected to
-                    if edge[0] == i: #If found, add the action ( basically the direction) for this edge
-                        if grpahDict["edge_features"][edgeIndexCounter][0] != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
-                            legalActions.append(grpahDict["edge_features"][edgeIndexCounter][0]) #Add edge index to list
+                    if int(edge[0]) == i: #If found, add the action ( basically the direction) for this edge
+                        print(f"DEBUG extractPacState: found outgoing edge ei={i} -> feat={int(grpahDict["edge_features"][edgeIndexCounter][0])} edge={tuple(edge)}")
+                        if int(grpahDict["edge_features"][edgeIndexCounter][0]) != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
+                            legalActions.append(int(grpahDict["edge_features"][edgeIndexCounter][0])) #Add edge index to list
                     edgeIndexCounter += 1
                 
-                for edge in edgeIndicies: # Go through all edges the node is connected to and add their direction to the list of legal actions
-                    legalActions.append(grpahDict["edge_features"][edge]) 
             
                 break
             
+        print("DEBUG extractPacState: returning legalActions:", legalActions, "pacNodeIndex:", pacNodeIndex)
         return legalActions, pacNodeIndex
     
     def getGraphAsState(self, graphDict):

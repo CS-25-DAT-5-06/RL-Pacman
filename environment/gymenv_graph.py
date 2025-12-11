@@ -87,10 +87,10 @@ class GraphEnv(ge.GymEnv):
         self.environmentNXGraph = self.gymGraphToNXGraph()
 
         observation = dict({
-            "nodes": self.nodes,
-            "nodesXY": self.nodesXY,
-            "edges": self.edges,
-            "edge_features": self.edge_features
+            "nodes": self.nodes.copy(),
+            "nodesXY": self.nodesXY.copy(),
+            "edges": self.edges.copy(),
+            "edge_features": self.edge_features.copy()
         })
 
         return observation, dict()
@@ -122,10 +122,10 @@ class GraphEnv(ge.GymEnv):
         self.nodes[newPacNodeIndex][nodeEnum.CAPSULE.value] = 0
 
         observation = dict({
-            "nodes": self.nodes,
-            "nodesXY": self.nodesXY,
-            "edges": self.edges,
-            "edge_features": self.edge_features
+            "nodes": self.nodes.copy(),
+            "nodesXY": self.nodesXY.copy(),
+            "edges": self.edges.copy(),
+            "edge_features": self.edge_features.copy()
         })
 
         return observation, reward, terminated, truncated, info
@@ -187,7 +187,7 @@ class GraphEnv(ge.GymEnv):
         return ghostPresent, pacmanPresent
 
 
-    #TODO: This is a very hacky function from when the x,y coordinates was still in the nodes
+    # This is a very hacky function from when the x,y coordinates was still in the nodes
     def connectNodesToSurroundingNodes(self, nodeList):
         running_edge_link_list = []
         running_edge_feature_list = []
