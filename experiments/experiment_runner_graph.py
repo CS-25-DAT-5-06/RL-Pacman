@@ -110,13 +110,13 @@ def run_experiment(config_path):
         obs, info = env.reset()
         #####DEBUG REGION START#####
         import numpy as np
-        print("env._direction_to_action:", env._direction_to_action)
-        print("env._inv_direction_to_action:", env._inv_direction_to_action)
+        #print("env._direction_to_action:", env._direction_to_action)
+        #print("env._inv_direction_to_action:", env._inv_direction_to_action)
 
         # Agent belief from graph observation
         pac_legal, pac_idx = agent.extractPacState(obs)
-        print("pacNodeIndex:", pac_idx, "agent_legal_from_graph (ints):", pac_legal, 
-              "agent_legal_named:", [env._inv_direction_to_action[a] for a in pac_legal])
+        #print("pacNodeIndex:", pac_idx, "agent_legal_from_graph (ints):", pac_legal, 
+              #"agent_legal_named:", [env._inv_direction_to_action[a] for a in pac_legal])
 
         # Show outgoing edges for pac node: (edge_idx, action_int, action_name, (u,v), dest_coord, wall_at_dest)
         pac_edges = []
@@ -134,19 +134,19 @@ def run_experiment(config_path):
                     wall_at_dest = "unknown"
                 pac_edges.append((ei, action_int, action_name, (int(edge[0]), dest), dest_coord, wall_at_dest))
 
-        print("pac_edges:", pac_edges)
+        #print("pac_edges:", pac_edges)
 
         # Print environment's legal moves from game state
         env_legal_dirs = env.game.state.getLegalPacmanActions()
         env_legal = [env._direction_to_action[d] for d in env_legal_dirs]
-        print("env_legal (ints):", env_legal, "env_legal_named:", env_legal_dirs)
+        #print("env_legal (ints):", env_legal, "env_legal_named:", env_legal_dirs)
 
         # Also print pac node coords and node features for context
-        print("pac node coords:", tuple(obs["nodesXY"][pac_idx]), "pac node features:", tuple(obs["nodes"][pac_idx]))
+        #print("pac node coords:", tuple(obs["nodesXY"][pac_idx]), "pac node features:", tuple(obs["nodes"][pac_idx]))
 
-        print("shares_memory edges/env.edges:", np.shares_memory(obs["edges"], env.edges))
-        print("shares_memory edge_features/env.edge_features:", np.shares_memory(obs["edge_features"], env.edge_features))
-        print("ids: obs_edges", id(obs["edges"]), "env.edges", id(env.edges))
+        #print("shares_memory edges/env.edges:", np.shares_memory(obs["edges"], env.edges))
+        #print("shares_memory edge_features/env.edge_features:", np.shares_memory(obs["edge_features"], env.edge_features))
+        #print("ids: obs_edges", id(obs["edges"]), "env.edges", id(env.edges))
         ######DEBUG REGION END######
 
 
@@ -237,16 +237,24 @@ def run_experiment(config_path):
     # Create output directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     experiment_name = config['experiment_name']
-    output_base = config['output'].get('base_dir', 'data/experiments')
+    output_base = config['output'].get('base_dir', 'data/experiments/graph')
     output_dir = os.path.join(output_base,f"{timestamp}_{experiment_name}")
     os.makedirs(output_dir, exist_ok=True)
     
+    # Save config for reproducibility
+    config_save_path = os.path.join(output_dir, 'config.yaml')
+    with open(config_save_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
+    print(f"Config saved to: {config_save_path}")
+
     # Save metrics to CSV
     csv_path = os.path.join(output_dir, "metrics.csv")
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
             'episode', 'reward', 'steps', 'win', 'countableWin', 'epsilon', 'avg_q_value', 'q_table_size'
-        ])
+        ],
+            delimiter=';'
+        )
         writer.writeheader()
         writer.writerows(metrics)
     print(f"Metrics saved to: {csv_path}")
@@ -281,14 +289,15 @@ def run_experiment(config_path):
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:
-        print("Usage: python experiment_runner.py <config.yaml>")
-        print("\nExample: python experiment_runner.py configurations/qlearning_simple_smallGrid.yaml")
+        print("Usage: python experiment_runner_graph.py <path/to/config.yaml>")
+        print("\nExample: python experiment_runner_graph.py configurations/graph/qlearning_small.yaml")
         sys.exit(1)
     
     config_file = sys.argv[1]
-    if not os.path.exists("experiments/"+ config_file):
+
+    if not os.path.exists(config_file):
         print(f"Error: Configuration file '{config_file}' not found!")
         sys.exit(1)
-    
-    output_dir = run_experiment("experiments/"+ config_file)
+
+    output_dir = run_experiment(config_file)
     print(f"\nResults saved to: {output_dir}")

@@ -43,7 +43,18 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
                 pruned["edge_features"][pacEdge][0] = -1 # Invalidate / Cut-Off edge as legal 
         return pruned
 
-
+    
+    def update(self, state, action, reward, next_state, done):
+        pruned_state = self.pruneStateGraph(pruned=state)
+        pruned_next_state = self.pruneStateGraph(pruned=next_state)
+        
+        #print("\nDEBUG UPDATE:")
+        #print("Original outgoing edges:", state["edges"])
+        #print("Pruned outgoing edges:  ", pruned_state["edge_features"])
+        #print("Action taken:", action)
+        #print("Legal actions passed to update():", self.extractPacState(state)[0])
+        
+        super().update(pruned_state, action, reward, pruned_next_state, done)
         
 
     def checkNodePathsForGhosts(self, graphDict, nodeToCheckId, hopNumber):

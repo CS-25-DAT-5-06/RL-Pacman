@@ -53,7 +53,7 @@ class NaiveGraphQLearningAgent:
         # Epsilon-greedy action selection:
         if np.random.random() < epsilon:
             if len(legalActions) == 0:
-                print("Emergency fallback for get_action triggered")
+                #print("Emergency fallback for get_action triggered")
                 # choose any non-STOP action uniformly
                 non_stop_actions = [a for a in range(1, self.action_space_size)]
                 return int(np.random.choice(non_stop_actions))
@@ -163,7 +163,7 @@ class NaiveGraphQLearningAgent:
 
                 for edge in grpahDict["edges"]: #Looking after the outgoing edges the node is connected to
                     if int(edge[0]) == i: #If found, add the action ( basically the direction) for this edge
-                        print(f"DEBUG extractPacState: found outgoing edge ei={i} -> feat={int(grpahDict["edge_features"][edgeIndexCounter][0])} edge={tuple(edge)}")
+                        #print(f"DEBUG extractPacState: found outgoing edge ei={i} -> feat={int(grpahDict["edge_features"][edgeIndexCounter][0])} edge={tuple(edge)}")
                         if int(grpahDict["edge_features"][edgeIndexCounter][0]) != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
                             legalActions.append(int(grpahDict["edge_features"][edgeIndexCounter][0])) #Add edge index to list
                     edgeIndexCounter += 1
@@ -171,7 +171,7 @@ class NaiveGraphQLearningAgent:
             
                 break
             
-        print("DEBUG extractPacState: returning legalActions:", legalActions, "pacNodeIndex:", pacNodeIndex)
+        #print("DEBUG extractPacState: returning legalActions:", legalActions, "pacNodeIndex:", pacNodeIndex)
         return legalActions, pacNodeIndex
     
     def getGraphAsState(self, graphDict):
