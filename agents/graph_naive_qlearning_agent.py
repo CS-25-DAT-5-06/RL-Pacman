@@ -147,12 +147,12 @@ class NaiveGraphQLearningAgent:
         return total_q / total_entries if total_entries > 0 else 0.0
 
 
-    def extractPacState(self, grpahDict):
+    def extractPacState(self, graphDict):
         pacNodeIndex = None
         legalActions = []
 
         #print("First 10 edges:", stateGraph["edges"][:10])
-        for i, node in enumerate(grpahDict["nodes"]): #Searching for PacNode
+        for i, node in enumerate(graphDict["nodes"]): #Searching for PacNode
             #print("Checking this nodee;", node) #Prints every node that we check
             
             if node[3] == 1: # PacNode found
@@ -161,18 +161,35 @@ class NaiveGraphQLearningAgent:
 
                 edgeIndexCounter = 0
 
-                for edge in grpahDict["edges"]: #Looking after the outgoing edges the node is connected to
+                for edge in graphDict["edges"]: #Looking after the outgoing edges the node is connected to
                     if int(edge[0]) == i: #If found, add the action ( basically the direction) for this edge
-                        #print(f"DEBUG extractPacState: found outgoing edge ei={i} -> feat={int(grpahDict["edge_features"][edgeIndexCounter][0])} edge={tuple(edge)}")
-                        if int(grpahDict["edge_features"][edgeIndexCounter][0]) != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
-                            legalActions.append(int(grpahDict["edge_features"][edgeIndexCounter][0])) #Add edge index to list
+                        #print(f"DEBUG extractPacState: found outgoing edge ei={i} -> feat={int(graphDict["edge_features"][edgeIndexCounter][0])} edge={tuple(edge)}")
+                        if int(graphDict["edge_features"][edgeIndexCounter][0]) != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
+                            legalActions.append(int(graphDict["edge_features"][edgeIndexCounter][0])) #Add edge index to list
                     edgeIndexCounter += 1
                 
             
                 break
-            
+        """
+        #Action mismatch check
+        env_legal = []
+        edgeIndexCounter = 0
+        for edge in graphDict["edges"]:
+            if int(edge[0]) == pacNodeIndex:
+                feat = int(graphDict["edge_features"][edgeIndexCounter][0])
+                if feat != -1:
+                    env_legal.append(feat)
+            edgeIndexCounter += 1
+
+        #Compare agent-legal vs environment-legal
+        if sorted(env_legal) != sorted(legalActions):
+            print("ACTION MISMATCH:", "agent_legal:", legalActions, "env_legal:", env_legal)
+        """
+
         #print("DEBUG extractPacState: returning legalActions:", legalActions, "pacNodeIndex:", pacNodeIndex)
         return legalActions, pacNodeIndex
+    
+        
     
     def getGraphAsState(self, graphDict):
         # Makes the graph hashable for beign used as unique keys in Q-table

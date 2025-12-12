@@ -163,8 +163,8 @@ def run_experiment(config_path):
 
             # DEBUG: compare agent belief vs environment legal moves
             env_legal = [env._direction_to_action[a] for a in env.game.state.getLegalPacmanActions()]
-            if action not in env_legal:
-                print("ACTION MISMATCH: ", action, " agent_legal_from_graph: ", agent.extractPacState(state)[0], " env_legal: ", env_legal)
+            #if action not in env_legal:
+                #print("ACTION MISMATCH: ", action, " agent_legal_from_graph: ", agent.extractPacState(state)[0], " env_legal: ", env_legal)
 
             # Environment step
             next_obs, reward, terminated, truncated, info = env.step(action)  

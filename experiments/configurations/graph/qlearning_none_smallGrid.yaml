@@ -3,6 +3,7 @@ experiment_name: "qlearning_baseline_none_smallGrid"
 
 environment:
   layout: "smallGrid"
+  render_mode: null
   rewards:
     time_penalty: -1
     eat_food: 10
@@ -18,15 +19,14 @@ agent:
   epsilon_decay: 0.995
   epsilon_min: 0.01
 
-state_abstraction:
-  enabled: true
-  feature_type: "none"
+graphAgent:
+  type: "naive"
 
 training:
   num_episodes: 5000
 
 output:
-  base_dir: "data/experiments"
+  base_dir: "data/experiments/graph/naive"
   save_q_table: true
   save_metrics: true
   print_interval: 100
