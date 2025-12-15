@@ -24,10 +24,13 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
             "nodes": pruned["nodes"].copy(),
             "nodesXY": pruned["nodesXY"].copy(),
             "edges": pruned["edges"].copy(),
-            "edge_features": pruned["edge_features"].copy()
+            "edge_features": pruned["edge_features"].copy(),
+            "pacNode": int(pruned["pacNode"]),  # <-- ADD THIS LINE
+            # Preserve env-legal actions if provided by the runner
+            "env_legal_actions": pruned.get("env_legal_actions", None)
         }
 
-        __, pacNodeIndex = self.extractPacState(pruned)
+        __, pacNodeIndex = self.extractPacState(pruned) #NOTE: STOP (0) must always remain legal; pruning only affects movement edges
 
         #Find what out what pacman is connected too
         pacOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(graphDict=pruned, nodeId=pacNodeIndex)
@@ -41,6 +44,15 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
             #print(stateGraph.keys())
             if foundGhostOnPath == True:
                 pruned["edge_features"][pacEdge][0] = -1 # Invalidate / Cut-Off edge as legal 
+
+            # DEBUG: report pruned outgoing actions
+        actions = []
+        for ei, edge in enumerate(pruned["edges"]):
+            if edge[0] == pacNodeIndex:
+                actions.append(pruned["edge_features"][ei][0])
+
+        #print("PRUNE DEBUG — pacNode:", pacNodeIndex, "edge actions:", actions)
+
         return pruned
 
     
@@ -76,7 +88,7 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
         node = graphDict["nodes"][nodeId]
 
         for i, edge in enumerate(graphDict["edges"]):
-            if edge[0] == int(nodeId):
+            if int(edge[0]) == int(nodeId):
                 edgeIndexList.append(i)
 
         return edgeIndexList

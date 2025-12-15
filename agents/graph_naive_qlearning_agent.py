@@ -50,13 +50,18 @@ class NaiveGraphQLearningAgent:
         #Get legal actions an the node pacman is on
         legalActions, pacNodeId = self.extractPacState(graphDict)
 
+        # Prefer environment-truth legal actions if provided by experiment_runner_graph.py
+        env_legal = graphDict.get("env_legal_actions", None)
+        if env_legal is not None:
+            legalActions = [int(a) for a in env_legal if a is not None]
+            
+        # Filter out invalid / pruned actions and anything outside action space
+        legalActions = sorted({a for a in legalActions if 0 <= int(a) < self.action_space_size})
+
         # Epsilon-greedy action selection:
         if np.random.random() < epsilon:
             if len(legalActions) == 0:
-                #print("Emergency fallback for get_action triggered")
-                # choose any non-STOP action uniformly
-                non_stop_actions = [a for a in range(1, self.action_space_size)]
-                return int(np.random.choice(non_stop_actions))
+                return 0  #STOP is always safe
             return int(np.random.choice(legalActions))
 
         else:
@@ -103,7 +108,16 @@ class NaiveGraphQLearningAgent:
             # Bellman equation: current reward 0 discounted max future Q
             # Temporal difference learning
             next_state = self.getGraphAsState(graphDict=next_graphDict)
-            next_legal_actions, _ = self.extractPacState(next_graphDict) 
+            # Prefer environment-truth legal actions if provided
+            next_env_legal = next_graphDict.get("env_legal_actions", None)
+            if next_env_legal is not None:
+                next_legal_actions = [int(a) for a in next_env_legal if a is not None]
+            else:
+                next_legal_actions, _ = self.extractPacState(next_graphDict)
+
+
+            # Final safety filter
+            next_legal_actions = sorted({a for a in next_legal_actions if 0 <= a < self.action_space_size})
             # Use only legal next actions to compute max_next_q
             if len(next_legal_actions) == 0:
                 max_next_q = 0.0
@@ -148,46 +162,18 @@ class NaiveGraphQLearningAgent:
 
 
     def extractPacState(self, graphDict):
-        pacNodeIndex = None
-        legalActions = []
+        pacNode = int(graphDict["pacNode"])
+        edges = graphDict["edges"]
+        edge_features = graphDict["edge_features"]
 
-        #print("First 10 edges:", stateGraph["edges"][:10])
-        for i, node in enumerate(graphDict["nodes"]): #Searching for PacNode
-            #print("Checking this nodee;", node) #Prints every node that we check
-            
-            if node[3] == 1: # PacNode found
-                pacNodeIndex = i #Save nodeId/nodeIndex
-                #print("Pacman is at node:", node) #Confirm that acutally find pacman node
+        legalActions = set()
+        for i, (u, v) in enumerate(edges):
+            if u == pacNode:
+                legalActions.add(int(edge_features[i][0]))
 
-                edgeIndexCounter = 0
+        legalActions.add(0)  # STOP always allowed
 
-                for edge in graphDict["edges"]: #Looking after the outgoing edges the node is connected to
-                    if int(edge[0]) == i: #If found, add the action ( basically the direction) for this edge
-                        #print(f"DEBUG extractPacState: found outgoing edge ei={i} -> feat={int(graphDict["edge_features"][edgeIndexCounter][0])} edge={tuple(edge)}")
-                        if int(graphDict["edge_features"][edgeIndexCounter][0]) != -1: # -1 here means the edge this feature is connected to is invalid and should be ignored
-                            legalActions.append(int(graphDict["edge_features"][edgeIndexCounter][0])) #Add edge index to list
-                    edgeIndexCounter += 1
-                
-            
-                break
-        """
-        #Action mismatch check
-        env_legal = []
-        edgeIndexCounter = 0
-        for edge in graphDict["edges"]:
-            if int(edge[0]) == pacNodeIndex:
-                feat = int(graphDict["edge_features"][edgeIndexCounter][0])
-                if feat != -1:
-                    env_legal.append(feat)
-            edgeIndexCounter += 1
-
-        #Compare agent-legal vs environment-legal
-        if sorted(env_legal) != sorted(legalActions):
-            print("ACTION MISMATCH:", "agent_legal:", legalActions, "env_legal:", env_legal)
-        """
-
-        #print("DEBUG extractPacState: returning legalActions:", legalActions, "pacNodeIndex:", pacNodeIndex)
-        return legalActions, pacNodeIndex
+        return list(legalActions), pacNode
     
         
     

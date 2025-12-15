@@ -152,25 +152,75 @@ def run_experiment(config_path):
 
 
         state = obs #define state here as well
+
+        #Cache env-legal actions in the state dict (prevents graph/env mismatch)
+        env_legal = [env._direction_to_action[d] for d in env.game.state.getLegalPacmanActions()]
+        state = dict(obs)
+        state["env_legal_actions"] = env_legal
         
         episode_reward = 0
         episode_steps = 0
         done = False
         
         while not done:
+            #Always compute legal actions from the underlying GymEnv state
+            env_legal = [env._direction_to_action[d] for d in env.game.state.getLegalPacmanActions()]
+            state = dict(obs)
+            state["env_legal_actions"] = env_legal
+
             # Agent selects action
             action = agent.get_action(state, training=True)
 
             # DEBUG: compare agent belief vs environment legal moves
             env_legal = [env._direction_to_action[a] for a in env.game.state.getLegalPacmanActions()]
-            #if action not in env_legal:
-                #print("ACTION MISMATCH: ", action, " agent_legal_from_graph: ", agent.extractPacState(state)[0], " env_legal: ", env_legal)
+            if action not in env_legal:
+                pac_legal, pac_idx = agent.extractPacState(state)
+                pac_xy = tuple(state["nodesXY"][pac_idx])
+                env_pac_xy = tuple(env.game.state.getPacmanPosition())
+
+                print("\n=== ACTION MISMATCH ===")
+                print("action chosen:", action, env._inv_direction_to_action[action])
+                print("agent_legal_from_graph:", pac_legal)
+                print("env_legal:", env_legal)
+                print("pac_idx (graph):", pac_idx)
+                print("pac_xy (graph):", pac_xy)
+                print("pac_xy (env):  ", env_pac_xy)
+
+                print("Outgoing graph edges from pac node:")
+                for ei, (edge, feat) in enumerate(zip(state["edges"], state["edge_features"])):
+                    if int(edge[0]) == pac_idx:
+                        dest = int(edge[1])
+                        dest_xy = tuple(state["nodesXY"][dest])
+                        print(
+                            f"  edge_idx={ei}",
+                            f"action={feat[0]}",
+                            f"name={env._inv_direction_to_action.get(int(feat[0]), 'INVALID')}",
+                            f"dest_xy={dest_xy}",
+                            f"wall={env.layout.walls[dest_xy[0]][dest_xy[1]]}"
+                        )
+
+                env_dirs = env.game.state.getLegalPacmanActions()
+                print("Env legal directions:", env_dirs)
+                print("Env legal deltas:")
+                for d in env_dirs:
+                    dx, dy = {
+                        "East":  (1, 0),
+                        "West":  (-1, 0),
+                        "North": (0, 1),
+                        "South": (0, -1),
+                        "Stop":  (0, 0)
+                    }[d]
+                    print(" ", d, "->", (env_pac_xy[0] + dx, env_pac_xy[1] + dy))
 
             # Environment step
             next_obs, reward, terminated, truncated, info = env.step(action)  
             done = terminated or truncated
+            state = dict(obs)
             
             next_state = next_obs
+            #Store next-step env-legal actions for downstream update/diagnostics
+            next_env_legal = [env._direction_to_action[d] for d in env.game.state.getLegalPacmanActions()]
+            next_state["env_legal_actions"] = next_env_legal
             
             # Update Q-table
             agent.update(state, action, reward, next_state, done)
