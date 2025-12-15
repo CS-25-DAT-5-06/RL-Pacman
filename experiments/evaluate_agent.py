@@ -84,6 +84,7 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
     # Evaluation Loop
     wins = 0
     total_reward = 0
+    total_score = 0
     
     print(f"\nStarting evaluation for {num_episodes} episodes...")
     print("-" * 50)
@@ -111,17 +112,26 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
             steps += 1
             
         total_reward += episode_reward
-        if episode_reward > 0: # Simple win check based on positive reward
+        total_score += info['score']
+
+        # if episode_reward > 0: # Simple win check based on positive reward
+        #     wins += 1
+        if(info['win']):
             wins += 1
+        
             
-        print(f"Episode {i+1}: Reward = {episode_reward}, Steps = {steps}")
+        print(f"Episode {i+1}: Reward = {episode_reward},Score = {info['score']}, Steps = {steps}")
         
     env.close()
     
+
+
     print("-" * 50)
     print(f"Evaluation Complete")
     print(f"Win Rate: {wins/num_episodes:.2f}")
     print(f"Avg Reward: {total_reward/num_episodes:.2f}")
+
+    return wins/num_episodes,  total_reward/num_episodes, total_score/num_episodes
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate a trained Pacman agent")
