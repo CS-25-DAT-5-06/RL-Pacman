@@ -1,10 +1,11 @@
-# Production Configuration for "Crisis vs. Greed vs. Hunt" Agent
+  # Production Configuration for "Crisis vs. Greed vs. Hunt" Agent
 # Optimized for the new abstraction with Hunt Mode and Last Action.
 
 experiment_name: "qlearning_relative_crisis_optimized_originalClassic"
 
 environment:
   layout: "originalClassic"
+  render_mode: "human"
   rewards:
     time_penalty: -2      # Encourages speed
     eat_food: 20          # Strong incentive to eat
@@ -20,17 +21,20 @@ agent:
   epsilon_decay: 0.999    # Slower decay for 5000 episodes
   epsilon_min: 0.01       # Keep a tiny bit of randomness
 
-state_abstraction:
-  enabled: true
-  feature_type: "relative_crisis_bfs" # Now includes Hunt Mode + Last Action + BFS Navigation
+#state_abstraction:
+#  enabled: true
+#  feature_type: "relative_crisis_bfs" # Now includes Hunt Mode + Last Action + BFS Navigation
+
+graphAgent:
+  type: "pruned"
 
 training:
-  num_episodes: 5000      # Extended training
-  eval_interval: 100
+  num_episodes: 1000      # Extended training
+  eval_interval: 50
   eval_episodes: 10
 
 output:
   base_dir: "data/experiments"
   save_q_table: true
   save_metrics: true
-  print_interval: 100
+  print_interval: 50

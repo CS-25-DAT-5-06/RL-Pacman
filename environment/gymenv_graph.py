@@ -5,6 +5,8 @@ from gymnasium.spaces import Graph, Box
 from . import gymenv as ge
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from enum import Enum
 from berkeley_pacman import pacman as pm
 from berkeley_pacman.util import *
 from berkeley_pacman import layout
@@ -22,15 +24,31 @@ PACMAN = "KeyboardAgent"
 
 RECORDING_PATH = "data/recordings/"
 
+class nodeEnum(Enum):
+    FOOD = 0
+    CAPSULE = 1
+    GHOST_AGENT_PRESENT = 2
+    PACMAN_AGENT_PRESENT = 3
 
 class GraphEnv(ge.GymEnv):
-    def __init__(self, layoutName, record=False, record_interval=None, config="/experiments/configurations/default.ini", render_mode=None):
+    def __init__(self, layoutName, record=False, record_interval=None, reward_config=None, render_mode=None):
         #Getting all of the necessary variables initialized just like in gymenv.py
-        super().__init__(layoutName, record, record_interval, config, render_mode)        
+        super().__init__(layoutName, record, record_interval, reward_config, render_mode)        
 
+        if reward_config is None:
+            pm.rewardConfig = {
+            "EAT_FOOD": 10,
+            "EAT_GHOST": 200,
+            "TIME_PENALTY": -1,
+            "WIN": 500,
+            "LOSE": -500,
+            "CAPSULE": 10
+        }
+        else:
+            pm.rewardConfig = reward_config
         # walkable_nodes amount of nodes, 7 feautures each
-        # Node Features (id, pellet/food, capsule, ghostAgentPresent, pacmanAgentPresent, trueX, trueY)
-        self.nodes, self.edges, self.edge_features = self.createGraphFromLayout()
+        # OLD Node Features (id, pellet/food, capsule, ghostAgentPresent, pacmanAgentPresent, trueX, trueY)
+        self.nodes, self.nodesXY, self.edges, self.edge_features = self.createGraphFromLayout()
 
         #np.set_printoptions(threshold=sys.maxsize)
         #print(f"Nodes:  {self.nodes}")
@@ -55,19 +73,22 @@ class GraphEnv(ge.GymEnv):
             )
         )
 
-
-        # Getting the NetworkX version of the graph, for visualization purposes
+        #Getting the NetworkX version of the graph, for visualization purposes
         self.environmentNXGraph = self.gymGraphToNXGraph()
-        self.visual_of_nodes_and_edges(self.environmentNXGraph)
-
+        #self.visual_of_nodes_and_edges(self.environmentNXGraph)
+        self.fig, self.ax = plt.subplots()
     
 
     
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
 
+        self.nodes, self.nodesXY, self.edges, self.edge_features = self.createGraphFromLayout()
+        self.environmentNXGraph = self.gymGraphToNXGraph()
+
         observation = dict({
             "nodes": self.nodes,
+            "nodesXY": self.nodesXY,
             "edges": self.edges,
             "edge_features": self.edge_features
         })
@@ -83,25 +104,26 @@ class GraphEnv(ge.GymEnv):
         newPacNodeIndex, newGhostNodesIndicies = self.parseGymEnvObs(gymEnvObs)
 
         # Remove old PacMan and ghost Position in Graph
-        self.nodes[pacNodeIndex][4] = 0
+        self.nodes[pacNodeIndex][nodeEnum.PACMAN_AGENT_PRESENT.value] = 0
         self.environmentNXGraph.nodes[pacNodeIndex]["features"] = self.nodes[pacNodeIndex]
         for oldGhost in ghostNodesIndicies:
-            self.nodes[oldGhost][3] = 0
+            self.nodes[oldGhost][nodeEnum.GHOST_AGENT_PRESENT.value] = 0
             self.environmentNXGraph.nodes[oldGhost]["features"] = self.nodes[oldGhost]
         
         # Add new PacMan and Ghost position
-        self.nodes[newPacNodeIndex][4] = 1
+        self.nodes[newPacNodeIndex][nodeEnum.PACMAN_AGENT_PRESENT.value] = 1
         self.environmentNXGraph.nodes[newPacNodeIndex]["features"] = self.nodes[newPacNodeIndex]
         for newGhost in newGhostNodesIndicies:
-            self.nodes[newGhost][3] = 1
+            self.nodes[newGhost][nodeEnum.GHOST_AGENT_PRESENT.value] = 1
             self.environmentNXGraph.nodes[newGhost]["features"] = self.nodes[newGhost]
 
         # Eat Food/Pellet/Capsule
-        self.nodes[newPacNodeIndex][1] = 0
-        self.nodes[newPacNodeIndex][2] = 0
+        self.nodes[newPacNodeIndex][nodeEnum.FOOD.value] = 0
+        self.nodes[newPacNodeIndex][nodeEnum.CAPSULE.value] = 0
 
         observation = dict({
             "nodes": self.nodes,
+            "nodesXY": self.nodesXY,
             "edges": self.edges,
             "edge_features": self.edge_features
         })
@@ -118,6 +140,7 @@ class GraphEnv(ge.GymEnv):
         walkable_nodes = 0
 
         node_list = []
+        node_xy_list = []
         edge_link_list = []
         edge_features_list = []
 
@@ -129,12 +152,18 @@ class GraphEnv(ge.GymEnv):
                     ghostAgentPresent, pacmanAgentPresent = self.checkAgentPresence(x, y)
 
                     node_list.append([walkable_nodes - 1, self.layout.food[x][y], capsulePresent, ghostAgentPresent, pacmanAgentPresent, x, y])
+                    node_xy_list.append([x, y])
 
         edge_link_list, edge_features_list = self.connectNodesToSurroundingNodes(node_list)
-                    
+
+        node_list_xy_removed = []
+        for node in node_list:
+            node_list_xy_removed.append([node[1], node[2], node[3], node[4]])
         
-        # All of this computing... just to make it into a NumPy array for more computing :)
-        return np.array(node_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
+        node_list = node_list_xy_removed  
+        
+        #All of this computing... just to make it into a NumPy array for more computing :)
+        return np.array(node_list, dtype=np.int64), np.array(node_xy_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
 
 
     def checkCapsulePresence(self, xCoordinate, yCoordinate):
@@ -158,7 +187,7 @@ class GraphEnv(ge.GymEnv):
         return ghostPresent, pacmanPresent
 
 
-
+    #TODO: This is a very hacky function from when the x,y coordinates was still in the nodes
     def connectNodesToSurroundingNodes(self, nodeList):
         running_edge_link_list = []
         running_edge_feature_list = []
@@ -205,10 +234,10 @@ class GraphEnv(ge.GymEnv):
 
         #Starting by adding nodes with their features. Generating labels from their x, y values.
         for i, features in enumerate(self.nodes):
-            nodeId = self.nodes[i][0]
-            nodeX = self.nodes[i][5]
-            nodeY = self.nodes[i][6]
-            nodeLabel = f"({nodeId}, ({nodeX}, {nodeY}))"
+            nodeIndex = i
+            nodeX = self.nodesXY[i][0]
+            nodeY = self.nodesXY[i][1]
+            nodeLabel = f"({nodeIndex}, ({nodeX}, {nodeY}))"
             G.add_node(i, features=features, pos=(nodeX, nodeY), label=nodeLabel)
 
         for i, (u, v) in enumerate(self.edges):
@@ -224,24 +253,57 @@ class GraphEnv(ge.GymEnv):
         plt.gca().set_aspect("equal") #keep equal square porpotions so it resembles pacman game
         plt.show()
 
-    # Function to convert the observation from gymenv.py to changes in graph
+    def animate_graph(self, frame):
+        #Random valid action (0..4). 
+        action = int(self.action_space.sample())
+
+        #Step underlying environment; this updates game state
+        observation, reward, terminated, truncated, info = self.step(action)
+
+        #Use ax instead
+        self.ax.cla()
+
+        G = self.environmentNXGraph
+        pos = nx.get_node_attributes(G, "pos")
+
+        colors = []
+        for _, data in G.nodes(data=True):
+            features = data["features"]
+            ghostPresent = features[nodeEnum.GHOST_AGENT_PRESENT.value]
+            pacmanPresent = features[nodeEnum.PACMAN_AGENT_PRESENT.value]
+
+            if pacmanPresent == 1:
+                colors.append("yellow")
+            elif ghostPresent == 1:
+                colors.append("red")
+            else:
+                colors.append("skyblue")
+
+        nx.draw(G, pos, node_color=colors, with_labels=True, node_size=150, ax=self.ax)
+        self.ax.set_aspect("equal") #Get it ax instead of clear
+
+
+    #Function to convert the observation from gymenv.py to changes in graph
     def parseGymEnvObs(self, gymEnvObs):
-        #Translate x, y coordinates to nodes
         newPacNodeIndex = None
         newGhostNodeIndicies = []
 
         newPacNodeX = gymEnvObs["agent"][0]
         newPacNodeY = gymEnvObs["agent"][1]
         newGhostPosList = gymEnvObs["ghosts"].reshape(-1, 2)
-        for node in self.nodes:
-            if node[5] == newPacNodeX and node[6] == newPacNodeY:
-                newPacNodeIndex = np.where(self.nodes == node)[0]
-            
+
+        newPacNodeIndex = None
+        newGhostNodeIndicies = []
+
+        for i, nodeXY in enumerate(self.nodesXY):       
+            if nodeXY[0] == newPacNodeX and nodeXY[1] == newPacNodeY:
+                newPacNodeIndex = i                
+
             for ghostPos in newGhostPosList:
-                if node[5] == ghostPos[0] and node[6] == ghostPos[1]:
-                    newGhostNodeIndicies.append(np.where(self.node == node)[0]) 
-        
-        return newPacNodeIndex, newGhostPosList
+                if nodeXY[0] == ghostPos[0] and nodeXY[1] == ghostPos[1]:
+                    newGhostNodeIndicies.append(i)   
+
+        return newPacNodeIndex, newGhostNodeIndicies 
         
         
 
@@ -250,13 +312,12 @@ class GraphEnv(ge.GymEnv):
     def getAgentsNodes(self):
         pacNodeIndex = None
         ghostNodesIndices = []
-        for node in self.nodes:
-            if node[4] == 1:
-                pacNodeIndex = np.where(self.nodes == node)[0]
-            
+        for i, node in enumerate(self.nodes):
             if node[3] == 1:
-                ghostNodesIndices.append(np.where(self.nodes == node)[0])
-        
+                pacNodeIndex = i
+            if node[2] == 1:
+                ghostNodesIndices.append(i)
+
         return pacNodeIndex, ghostNodesIndices
     
     
@@ -269,7 +330,13 @@ class GraphEnv(ge.GymEnv):
     #    return list_of_outgoing_edges
 
 
-# Gotta test the __init__ function of the GraphEnv class         
+#Gotta test the __init__ function of the GraphEnv class         
 if __name__ == "__main__":
-    testObj = GraphEnv(layoutName="originalClassic")
+    env = GraphEnv(layoutName="originalClassic")
 
+    #Reset once to initialize everything 
+    obs, info = env.reset()
+
+    #Create the matplotlib figure and start the animation
+    ani = animation.FuncAnimation(env.fig, env.animate_graph, frames=500, interval=200, repeat=False)
+    plt.show()
