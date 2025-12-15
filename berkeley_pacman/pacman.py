@@ -721,7 +721,6 @@ def moduleLoadAgent(pacman, nographics):
         try:
             module = importlib.import_module(f"berkeley_pacman.{modulename.split('.')[0]}")
         except ImportError:
-            print("here!")
             continue
         if pacman in dir(module):
                 if nographics and modulename == 'keyboardAgents.py':
