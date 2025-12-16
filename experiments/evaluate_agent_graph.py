@@ -110,6 +110,7 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
             next_obs, reward, terminated, truncated, info = env.step(action)
             
             done = terminated or truncated
+            obs = next_obs
             episode_reward += reward
             steps += 1
             
