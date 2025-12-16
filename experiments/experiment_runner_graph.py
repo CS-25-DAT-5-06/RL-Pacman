@@ -96,9 +96,10 @@ def run_experiment(config_path):
             epsilon_min=config['agent']['epsilon_min'],
             hops_prune_limit=4
         )
+    else:
+        raise Exception("No valid graphAgent type selected")
 
-
-     # Training setup
+    # Training setup
     metrics = []
     print_interval = config['output']['print_interval']
     
