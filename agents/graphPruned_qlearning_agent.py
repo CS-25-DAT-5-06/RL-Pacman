@@ -11,30 +11,62 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
 
     def get_action(self, graphDict, training=True):
         # Start off by checking distances and prune graph paths where the ghost is too close
-        if training == True:
-            prunedGraphDict = self.pruneStateGraph(graphDict=graphDict)
-        
+        # Pruning regardless of training or not, beacuse the agent trains for a specific map now (See how we represent states in the Naive agent)
+        prunedGraphDict = self.pruneStateGraph(pruned=graphDict)
         return super().get_action(prunedGraphDict, training=training)
         
 
-    def pruneStateGraph(self, graphDict):
-        __, pacNodeIndex = self.extractPacState(graphDict)
+    def pruneStateGraph(self, pruned):
+        # Make copies of the arrays so we don't modify the env's internal state.
+        # graphDict is the raw observation coming from the env (it references env arrays).
+        # And since dictionaries are mutable data types, it essentially means that graphDict is a reference to the env's internal state
+        pruned = {
+            "nodes": pruned["nodes"].copy(),
+            "nodesXY": pruned["nodesXY"].copy(),
+            "edges": pruned["edges"].copy(),
+            "edge_features": pruned["edge_features"].copy(),
+            "pacNode": int(pruned["pacNode"]),  # <-- ADD THIS LINE
+            # Preserve env-legal actions if provided by the runner
+            "env_legal_actions": pruned.get("env_legal_actions", None)
+        }
+
+        __, pacNodeIndex = self.extractPacState(pruned) #NOTE: STOP (0) must always remain legal; pruning only affects movement edges
 
         #Find what out what pacman is connected too
-        pacOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(graphDict=graphDict, nodeId=pacNodeIndex)
+        pacOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(graphDict=pruned, nodeId=pacNodeIndex)
         
         #Look for ghost in hopsPruneLimit nodes
         for pacEdge in pacOutgoingEdges:
             #Checking for ghosts in immediate vicinity
-            pacEdgeDestinationNode = graphDict["edges"][pacEdge][1]
-            foundGhostOnPath = self.checkNodePathsForGhosts(graphDict=graphDict, nodeToCheckId=pacEdgeDestinationNode, hopNumber=0) # Check for ghost present on the PacEdge path and beyond
+            pacEdgeDestinationNode = pruned["edges"][pacEdge][1]
+            foundGhostOnPath = self.checkNodePathsForGhosts(graphDict=pruned, nodeToCheckId=pacEdgeDestinationNode, hopNumber=0) # Check for ghost present on the PacEdge path and beyond
 
             #print(stateGraph.keys())
             if foundGhostOnPath == True:
-                graphDict["edge_features"][pacEdge][0] = -1 # Invalidate / Cut-Off edge as legal 
-        return graphDict
+                pruned["edge_features"][pacEdge][0] = -1 # Invalidate / Cut-Off edge as legal 
 
+            # DEBUG: report pruned outgoing actions
+        actions = []
+        for ei, edge in enumerate(pruned["edges"]):
+            if edge[0] == pacNodeIndex:
+                actions.append(pruned["edge_features"][ei][0])
 
+        #print("PRUNE DEBUG — pacNode:", pacNodeIndex, "edge actions:", actions)
+
+        return pruned
+
+    
+    def update(self, state, action, reward, next_state, done):
+        pruned_state = self.pruneStateGraph(pruned=state)
+        pruned_next_state = self.pruneStateGraph(pruned=next_state)
+        
+        #print("\nDEBUG UPDATE:")
+        #print("Original outgoing edges:", state["edges"])
+        #print("Pruned outgoing edges:  ", pruned_state["edge_features"])
+        #print("Action taken:", action)
+        #print("Legal actions passed to update():", self.extractPacState(state)[0])
+        
+        super().update(pruned_state, action, reward, pruned_next_state, done)
         
 
     def checkNodePathsForGhosts(self, graphDict, nodeToCheckId, hopNumber):
@@ -45,9 +77,9 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
                 #We find out which nodes this one is connected to and hop to those
                 nodeOutgoingEdges = self.findOutgoingEdgesConnectedFromNode(graphDict=graphDict, nodeId=nodeToCheckId)
                 for edgeIndex in nodeOutgoingEdges:
-                    hopNumber += 1
                     nextNodeToCheckId = graphDict["edges"][edgeIndex][1]
-                    self.checkNodePathsForGhosts(graphDict=graphDict, nodeToCheckId=nextNodeToCheckId, hopNumber=hopNumber)
+                    if self.checkNodePathsForGhosts(graphDict=graphDict, nodeToCheckId=nextNodeToCheckId, hopNumber=hopNumber+1):
+                        return True
         
         return False
     
@@ -56,7 +88,7 @@ class GraphPrunedQLearningAgent(NaiveGraphQLearningAgent):
         node = graphDict["nodes"][nodeId]
 
         for i, edge in enumerate(graphDict["edges"]):
-            if edge[0] == node[0]:
+            if int(edge[0]) == int(nodeId):
                 edgeIndexList.append(i)
 
         return edgeIndexList

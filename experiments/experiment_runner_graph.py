@@ -94,11 +94,12 @@ def run_experiment(config_path):
             epsilon=config['agent']['epsilon'],
             epsilon_decay=config['agent']['epsilon_decay'],
             epsilon_min=config['agent']['epsilon_min'],
-            hops_prune_limit=10
+            hops_prune_limit=4
         )
+    else:
+        raise Exception("No valid graphAgent type selected")
 
-
-     # Training setup
+    # Training setup
     metrics = []
     print_interval = config['output']['print_interval']
     
@@ -108,21 +109,119 @@ def run_experiment(config_path):
     # Training loop
     for episode in range(config['training']['num_episodes']):
         obs, info = env.reset()
+        #####DEBUG REGION START#####
+        import numpy as np
+        #print("env._direction_to_action:", env._direction_to_action)
+        #print("env._inv_direction_to_action:", env._inv_direction_to_action)
+
+        # Agent belief from graph observation
+        pac_legal, pac_idx = agent.extractPacState(obs)
+        #print("pacNodeIndex:", pac_idx, "agent_legal_from_graph (ints):", pac_legal, 
+              #"agent_legal_named:", [env._inv_direction_to_action[a] for a in pac_legal])
+
+        # Show outgoing edges for pac node: (edge_idx, action_int, action_name, (u,v), dest_coord, wall_at_dest)
+        pac_edges = []
+        for ei, (edge, feat) in enumerate(zip(obs["edges"], obs["edge_features"])):
+            if int(edge[0]) == int(pac_idx):
+                action_int = int(feat[0])
+                action_name = env._inv_direction_to_action.get(action_int, str(action_int))
+                dest = int(edge[1])
+                dest_coord = tuple(obs["nodesXY"][dest])
+                # Check layout/wall if available
+                wall_at_dest = None
+                try:
+                    wall_at_dest = bool(env.layout.walls[dest_coord[0]][dest_coord[1]])
+                except Exception:
+                    wall_at_dest = "unknown"
+                pac_edges.append((ei, action_int, action_name, (int(edge[0]), dest), dest_coord, wall_at_dest))
+
+        #print("pac_edges:", pac_edges)
+
+        # Print environment's legal moves from game state
+        env_legal_dirs = env.game.state.getLegalPacmanActions()
+        env_legal = [env._direction_to_action[d] for d in env_legal_dirs]
+        #print("env_legal (ints):", env_legal, "env_legal_named:", env_legal_dirs)
+
+        # Also print pac node coords and node features for context
+        #print("pac node coords:", tuple(obs["nodesXY"][pac_idx]), "pac node features:", tuple(obs["nodes"][pac_idx]))
+
+        #print("shares_memory edges/env.edges:", np.shares_memory(obs["edges"], env.edges))
+        #print("shares_memory edge_features/env.edge_features:", np.shares_memory(obs["edge_features"], env.edge_features))
+        #print("ids: obs_edges", id(obs["edges"]), "env.edges", id(env.edges))
+        ######DEBUG REGION END######
+
+
+
         state = obs #define state here as well
+
+        #Cache env-legal actions in the state dict (prevents graph/env mismatch)
+        env_legal = [env._direction_to_action[d] for d in env.game.state.getLegalPacmanActions()]
+        state = dict(obs)
+        state["env_legal_actions"] = env_legal
         
         episode_reward = 0
         episode_steps = 0
         done = False
         
         while not done:
+            #Always compute legal actions from the underlying GymEnv state
+            env_legal = [env._direction_to_action[d] for d in env.game.state.getLegalPacmanActions()]
+            state = dict(obs)
+            state["env_legal_actions"] = env_legal
+
             # Agent selects action
             action = agent.get_action(state, training=True)
-            
+
+            # DEBUG: compare agent belief vs environment legal moves
+            env_legal = [env._direction_to_action[a] for a in env.game.state.getLegalPacmanActions()]
+            if action not in env_legal:
+                pac_legal, pac_idx = agent.extractPacState(state)
+                pac_xy = tuple(state["nodesXY"][pac_idx])
+                env_pac_xy = tuple(env.game.state.getPacmanPosition())
+
+                print("\n=== ACTION MISMATCH ===")
+                print("action chosen:", action, env._inv_direction_to_action[action])
+                print("agent_legal_from_graph:", pac_legal)
+                print("env_legal:", env_legal)
+                print("pac_idx (graph):", pac_idx)
+                print("pac_xy (graph):", pac_xy)
+                print("pac_xy (env):  ", env_pac_xy)
+
+                print("Outgoing graph edges from pac node:")
+                for ei, (edge, feat) in enumerate(zip(state["edges"], state["edge_features"])):
+                    if int(edge[0]) == pac_idx:
+                        dest = int(edge[1])
+                        dest_xy = tuple(state["nodesXY"][dest])
+                        print(
+                            f"  edge_idx={ei}",
+                            f"action={feat[0]}",
+                            f"name={env._inv_direction_to_action.get(int(feat[0]), 'INVALID')}",
+                            f"dest_xy={dest_xy}",
+                            f"wall={env.layout.walls[dest_xy[0]][dest_xy[1]]}"
+                        )
+
+                env_dirs = env.game.state.getLegalPacmanActions()
+                print("Env legal directions:", env_dirs)
+                print("Env legal deltas:")
+                for d in env_dirs:
+                    dx, dy = {
+                        "East":  (1, 0),
+                        "West":  (-1, 0),
+                        "North": (0, 1),
+                        "South": (0, -1),
+                        "Stop":  (0, 0)
+                    }[d]
+                    print(" ", d, "->", (env_pac_xy[0] + dx, env_pac_xy[1] + dy))
+
             # Environment step
             next_obs, reward, terminated, truncated, info = env.step(action)  
             done = terminated or truncated
+            state = dict(obs)
             
             next_state = next_obs
+            #Store next-step env-legal actions for downstream update/diagnostics
+            next_env_legal = [env._direction_to_action[d] for d in env.game.state.getLegalPacmanActions()]
+            next_state["env_legal_actions"] = next_env_legal
             
             # Update Q-table
             agent.update(state, action, reward, next_state, done)
@@ -137,8 +236,7 @@ def run_experiment(config_path):
         agent.decay_epsilon()
         
         # Track metrics
-        win = 1 if episode_reward > 0 else 0
-        countableWin = 1 if info["winState"] == True else 0
+        win = 1 if info['win'] > 0 else 0
         avg_q = agent.get_average_q_value()
         q_table_size = len(agent.q_table)
         
@@ -147,10 +245,10 @@ def run_experiment(config_path):
             'reward': episode_reward,
             'steps': episode_steps,
             'win': win,
-            'countableWin': countableWin,
             'epsilon': agent.epsilon,
             'avg_q_value': avg_q,
-            'q_table_size': q_table_size
+            'q_table_size': q_table_size,
+            'score': info['score']
         })
 
         
@@ -164,13 +262,11 @@ def run_experiment(config_path):
             recent_metrics = metrics[-print_interval:]
             avg_reward = sum(m['reward'] for m in recent_metrics) / len(recent_metrics)
             win_rate = sum(m['win'] for m in recent_metrics) / len(recent_metrics)
-            countable_win_rate = sum(m['countableWin'] for m in recent_metrics) / len(recent_metrics)
             
             print(f"Episode {episode + 1:4d}/{config['training']['num_episodes']} | "
                   f"Reward: {episode_reward:6.1f} | "
                   f"Avg Reward: {avg_reward:6.1f} | "
                   f"Win Rate: {win_rate:.2f} | "
-                  f"Countable Win Rate: {countable_win_rate:.2f} | "
                   f"Epsilon: {agent.epsilon:.4f} | "
                   f"Q-table: {q_table_size:6d} states | "
                   f"Avg Q: {avg_q:6.2f}")
@@ -189,16 +285,24 @@ def run_experiment(config_path):
     # Create output directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     experiment_name = config['experiment_name']
-    output_base = config['output'].get('base_dir', 'data/experiments')
+    output_base = config['output'].get('base_dir', 'data/experiments/graph')
     output_dir = os.path.join(output_base,f"{timestamp}_{experiment_name}")
     os.makedirs(output_dir, exist_ok=True)
     
+    # Save config for reproducibility
+    config_save_path = os.path.join(output_dir, 'config.yaml')
+    with open(config_save_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
+    print(f"Config saved to: {config_save_path}")
+
     # Save metrics to CSV
     csv_path = os.path.join(output_dir, "metrics.csv")
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
-            'episode', 'reward', 'steps', 'win', 'countableWin', 'epsilon', 'avg_q_value', 'q_table_size'
-        ])
+            'episode', 'reward', 'steps', 'win', 'epsilon', 'avg_q_value', 'q_table_size', 'score'
+        ],
+            delimiter=';'
+        )
         writer.writeheader()
         writer.writerows(metrics)
     print(f"Metrics saved to: {csv_path}")
@@ -233,14 +337,15 @@ def run_experiment(config_path):
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:
-        print("Usage: python experiment_runner.py <config.yaml>")
-        print("\nExample: python experiment_runner.py configurations/qlearning_simple_smallGrid.yaml")
+        print("Usage: python experiment_runner_graph.py <path/to/config.yaml>")
+        print("\nExample: python experiment_runner_graph.py configurations/graph/qlearning_small.yaml")
         sys.exit(1)
     
     config_file = sys.argv[1]
-    if not os.path.exists("experiments/"+ config_file):
+
+    if not os.path.exists(config_file):
         print(f"Error: Configuration file '{config_file}' not found!")
         sys.exit(1)
-    
-    output_dir = run_experiment("experiments/"+ config_file)
+
+    output_dir = run_experiment(config_file)
     print(f"\nResults saved to: {output_dir}")

@@ -30,10 +30,13 @@ class nodeEnum(Enum):
     GHOST_AGENT_PRESENT = 2
     PACMAN_AGENT_PRESENT = 3
 
+
 class GraphEnv(ge.GymEnv):
     def __init__(self, layoutName, record=False, record_interval=None, reward_config=None, render_mode=None):
         #Getting all of the necessary variables initialized just like in gymenv.py
         super().__init__(layoutName, record, record_interval, reward_config, render_mode)        
+
+        self.neighbourOffsets = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
         if reward_config is None:
             pm.rewardConfig = {
@@ -81,16 +84,34 @@ class GraphEnv(ge.GymEnv):
 
     
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed, options=options)
+        # Reset the underlying GymEnv ONCE and get the live positions
+        gymEnvObs, info = super().reset(seed=seed, options=options)
 
+        # Rebuild the static graph structure (nodes/features/edges) from the layout
         self.nodes, self.nodesXY, self.edges, self.edge_features = self.createGraphFromLayout()
+
+        # Clear dynamic flags (ghost/pacman presence)
+        self._clear_agent_flags()
+
+        # Convert GymEnv observation -> graph node indices
+        pac_idx, ghost_indices = self.parseGymEnvObs(gymEnvObs)
+
+        # Set dynamic flags using indices (NOT coordinates)
+        if pac_idx is not None:
+            self.nodes[pac_idx][nodeEnum.PACMAN_AGENT_PRESENT.value] = 1
+
+        for gi in ghost_indices:
+            self.nodes[gi][nodeEnum.GHOST_AGENT_PRESENT.value] = 1
+
+        # Rebuild NX graph (for visualization/debug)
         self.environmentNXGraph = self.gymGraphToNXGraph()
 
         observation = dict({
-            "nodes": self.nodes,
-            "nodesXY": self.nodesXY,
-            "edges": self.edges,
-            "edge_features": self.edge_features
+            "nodes": self.nodes.copy(),
+            "nodesXY": self.nodesXY.copy(),
+            "edges": self.edges.copy(),
+            "edge_features": self.edge_features.copy(),
+            "pacNode": pac_idx
         })
 
         return observation, dict()
@@ -122,17 +143,20 @@ class GraphEnv(ge.GymEnv):
         self.nodes[newPacNodeIndex][nodeEnum.CAPSULE.value] = 0
 
         observation = dict({
-            "nodes": self.nodes,
-            "nodesXY": self.nodesXY,
-            "edges": self.edges,
-            "edge_features": self.edge_features
+            "nodes": self.nodes.copy(),
+            "nodesXY": self.nodesXY.copy(),
+            "edges": self.edges.copy(),
+            "edge_features": self.edge_features.copy(),
+            "pacNode": newPacNodeIndex
         })
 
         return observation, reward, terminated, truncated, info
 
-
-
-    
+    def findNodeIndexFromXandYCoordinates(self, x, y):
+        for i, nodeXY in enumerate(self.nodesXY):
+            if int(nodeXY[0]) == x and int(nodeXY[1]) == y:
+                return i
+        raise ValueError(f"No node found at coordinates ({x}, {y})")
 
     #region BUILD LAYOUT GRAPH
 
@@ -149,7 +173,7 @@ class GraphEnv(ge.GymEnv):
                 if self.layout.walls[x][y] != True:
                     walkable_nodes += 1
                     capsulePresent = self.checkCapsulePresence(x, y)
-                    ghostAgentPresent, pacmanAgentPresent = self.checkAgentPresence(x, y)
+                    ghostAgentPresent, pacmanAgentPresent = 0, 0  # set from live env obs in reset()/step()
 
                     node_list.append([walkable_nodes - 1, self.layout.food[x][y], capsulePresent, ghostAgentPresent, pacmanAgentPresent, x, y])
                     node_xy_list.append([x, y])
@@ -165,6 +189,11 @@ class GraphEnv(ge.GymEnv):
         #All of this computing... just to make it into a NumPy array for more computing :)
         return np.array(node_list, dtype=np.int64), np.array(node_xy_list, dtype=np.int64), np.array(edge_link_list, dtype=np.int64), np.array(edge_features_list, dtype=np.int64)
 
+    def _clear_agent_flags(self):
+        """Clear dynamic agent presence flags in node feature matrix."""
+        # nodes: [food, capsule, ghost_present, pacman_present]
+        self.nodes[:, 2] = 0
+        self.nodes[:, 3] = 0
 
     def checkCapsulePresence(self, xCoordinate, yCoordinate):
         capsuleFound = 0
@@ -187,45 +216,42 @@ class GraphEnv(ge.GymEnv):
         return ghostPresent, pacmanPresent
 
 
-    #TODO: This is a very hacky function from when the x,y coordinates was still in the nodes
+    # This is a very hacky function from when the x,y coordinates was still in the nodes
     def connectNodesToSurroundingNodes(self, nodeList):
         running_edge_link_list = []
         running_edge_feature_list = []
 
-        # We go through every node
+        # Iterate over every source node
         for node in nodeList:
-            # We calculate the adjacent coordinates in each direction
-            # Future Improvement opportunity: Calculate all of of the adjacent directions instead of looping through them and check them all in one go in the loop below
-            for x, y in [(1,0), (-1,0), (0,1), (0,-1)]:
-                nodeX = node[5]
-                nodeY = node[6]
-                xCoordinateToTest, yCoordinateToTest = x + nodeX, y + nodeY
+            # Check all neighbour offsets (N, S, E, W)
+            for x, y in self.neighbourOffsets:
+                xCoordinateToTest = node[5] + x
+                yCoordinateToTest = node[6] + y
+
+                # Do not create edges into walls
+                if self.layout.walls[xCoordinateToTest][yCoordinateToTest]:
+                    continue
+
+                # Find the node at the target coordinate
                 for nodeToTest in nodeList:
-                    # Testing if any of the nodeToTest nodes is adjacent to node
-                    if nodeToTest[5] == xCoordinateToTest and nodeToTest[6] == yCoordinateToTest:
-                        # Adding edge and direction feature
-                        if x == 1:
-                            running_edge_link_list.append([node[0], nodeToTest[0]])
-                            running_edge_feature_list.append([self._direction_to_action["East"]])
-                            break
+                    if nodeToTest[5] != xCoordinateToTest or nodeToTest[6] != yCoordinateToTest:
+                        continue
 
-                        elif x == -1:
-                            running_edge_link_list.append([node[0], nodeToTest[0]])
-                            running_edge_feature_list.append([self._direction_to_action["West"]])
-                            break
+                    # Add edge
+                    running_edge_link_list.append([node[0], nodeToTest[0]])
 
-                        elif y == 1:
-                            running_edge_link_list.append([node[0], nodeToTest[0]])
-                            running_edge_feature_list.append([self._direction_to_action["North"]])
-                            break
+                    # Add corresponding action feature
+                    if x == 1:
+                        running_edge_feature_list.append([self._direction_to_action["East"]])
+                    elif x == -1:
+                        running_edge_feature_list.append([self._direction_to_action["West"]])
+                    elif y == 1:
+                        running_edge_feature_list.append([self._direction_to_action["North"]])
+                    elif y == -1:
+                        running_edge_feature_list.append([self._direction_to_action["South"]])
 
-                        elif y == -1:
-                            running_edge_link_list.append([node[0], nodeToTest[0]])
-                            running_edge_feature_list.append([self._direction_to_action["South"]])
-                            break
-                    
         return running_edge_link_list, running_edge_feature_list
-    
+
     #endregion
 
     
@@ -292,9 +318,6 @@ class GraphEnv(ge.GymEnv):
         newPacNodeY = gymEnvObs["agent"][1]
         newGhostPosList = gymEnvObs["ghosts"].reshape(-1, 2)
 
-        newPacNodeIndex = None
-        newGhostNodeIndicies = []
-
         for i, nodeXY in enumerate(self.nodesXY):       
             if nodeXY[0] == newPacNodeX and nodeXY[1] == newPacNodeY:
                 newPacNodeIndex = i                
@@ -303,12 +326,8 @@ class GraphEnv(ge.GymEnv):
                 if nodeXY[0] == ghostPos[0] and nodeXY[1] == ghostPos[1]:
                     newGhostNodeIndicies.append(i)   
 
-        return newPacNodeIndex, newGhostNodeIndicies 
+        return newPacNodeIndex, newGhostNodeIndicies
         
-        
-
-        
-
     def getAgentsNodes(self):
         pacNodeIndex = None
         ghostNodesIndices = []

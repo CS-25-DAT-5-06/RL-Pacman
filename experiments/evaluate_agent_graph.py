@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from environment.gymenv_graph import GraphEnv
 from agents.graph_naive_qlearning_agent import NaiveGraphQLearningAgent
+from agents.graphPruned_qlearning_agent import GraphPrunedQLearningAgent
 
 def load_config(config_path):
     with open(config_path, 'r') as f:
@@ -58,17 +59,27 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
     )
     
     # Setup Agent
-    # The Naive Q-learning agent shoud suffice for evaluation, since the specialized agents have trick to improve training.
-    # Here we just need an agent that can act upon a pre-trained model/Q-table
-    agent = NaiveGraphQLearningAgent(
-        action_space_size=4,
-        learning_rate=0, # No learning during evaluation
-        discount_factor=config['agent']['discount_factor'],
-        epsilon=0,       # Greedy policy
-        epsilon_decay=0,
-        epsilon_min=0,
-        hops_prune_limit=4
-    )
+    if config["graphAgent"]["type"] == "naive":
+        agent = NaiveGraphQLearningAgent(
+            action_space_size=4,
+            learning_rate=0, # No learning during evaluation
+            discount_factor=config['agent']['discount_factor'],
+            epsilon=0,       # Greedy policy
+            epsilon_decay=0,
+            epsilon_min=0,
+        )
+    elif config["graphAgent"]["type"] == "pruned":
+        agent = GraphPrunedQLearningAgent(
+            action_space_size=4,
+            learning_rate=0, # No learning during evaluation
+            discount_factor=config['agent']['discount_factor'],
+            epsilon=0,       # Greedy policy
+            epsilon_decay=0,
+            epsilon_min=0,
+            hops_prune_limit=4
+        )
+    else:
+        raise Exception("No valid graph agent selected")
     
     # Load Q-table
     print(f"Loading Q-table from {q_table_path}...")
@@ -77,7 +88,7 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
     
     # Evaluation Loop
     wins = 0
-    countableWins = 0
+    total_score = 0
     total_reward = 0
     
     print(f"\nStarting evaluation for {num_episodes} episodes...")
@@ -99,23 +110,25 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
             next_obs, reward, terminated, truncated, info = env.step(action)
             
             done = terminated or truncated
+            obs = next_obs
             episode_reward += reward
             steps += 1
             
         total_reward += episode_reward
-        if episode_reward > 0: # Simple win check based on positive reward
-            wins += 1
-        if info["winState"] == True:
-            countableWins += 1
+        total_score += info['score']
+        
+        # if episode_reward > 0: # Simple win check based on positive reward
+        #     wins += 1
+        if(info['win']):
+            win += 1
             
-        print(f"Episode {i+1}: Reward = {episode_reward}, Steps = {steps}")
+        print(f"Episode {i+1}: Reward = {episode_reward}, Score = {info['score']}, Steps = {steps}")
         
     env.close()
     
     print("-" * 50)
     print(f"Evaluation Complete")
     print(f"Win Rate: {wins/num_episodes:.2f}")
-    print(f"Countable Win Rate: {countableWins/num_episodes:.2f}")
     print(f"Avg Reward: {total_reward/num_episodes:.2f}")
 
 if __name__ == "__main__":

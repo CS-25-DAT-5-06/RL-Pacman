@@ -1,0 +1,34 @@
+# experiments/configurations/qlearning_medium_smallGrid.yaml
+experiment_name: "qlearning_medium_smallGrid"
+
+environment:
+  layout: "smallGrid"
+  render_mode: null
+  rewards:
+    time_penalty: -1
+    eat_food: 10
+    eat_ghost: 200
+    win: 500
+    lose: -500
+    capsule: 10
+
+agent:
+  learning_rate: 0.1
+  discount_factor: 0.99
+  epsilon: 1.0
+  epsilon_decay: 0.995
+  epsilon_min: 0.01
+
+graphAgent:
+  type: "naive"
+
+training:
+  num_episodes: 2000
+
+output:
+  base_dir: "data/experiments/graph/naive"
+  save_q_table: true
+  save_metrics: true
+  print_interval: 100
+  record_games: true           # Record games
+  record_interval: 1000         # Record game per interval
