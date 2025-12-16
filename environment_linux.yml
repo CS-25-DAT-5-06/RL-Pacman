@@ -76,6 +76,7 @@ dependencies:
       - pyparsing==3.2.5
       - python-dateutil==2.9.0.post0
       - pytz==2025.2
+      - pyyaml==6.0.3
       - six==1.17.0
       - stable-baselines3==2.7.0
       - sympy==1.14.0
