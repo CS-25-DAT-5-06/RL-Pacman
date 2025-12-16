@@ -6,9 +6,9 @@ from berkeley_pacman import layout
 from berkeley_pacman.game import Directions
 import os
 
-from stable_baselines3 import A2C
+#from stable_baselines3 import A2C
 
-import stable_baselines3.common.env_checker as ec
+#import stable_baselines3.common.env_checker as ec
 
 def count(list):
     i = 0
@@ -94,7 +94,7 @@ class GymEnv(gym.Env):
 
         self.observation_space = gym.spaces.Dict({
             "agent": gym.spaces.Box(low = np.array([0,0]),high=np.array([self.layout.width-1,self.layout.height-1]),shape=(2,),dtype=np.int64),
-            "food": gym.spaces.Box(low = 0, high = 1, shape = (self.layout.width*self.layout.height,),dtype=np.bool),
+            "food": gym.spaces.Box(low = 0, high = 1, shape = (self.layout.width*self.layout.height,),dtype=bool),
             "ghosts": gym.spaces.Box(low = 0,high = max(self.layout.width - 1,self.layout.height - 1),shape=(2*self.layout.numGhosts,) ,dtype=np.int64),
             "ghost_scared_timers": gym.spaces.Box(low = 0, high = 100, shape=(self.layout.numGhosts,), dtype=np.int64),
             "capsules": gym.spaces.Box(low = -1,high = max(self.layout.width - 1,self.layout.height - 1),shape=(self.shapeCapsules,), dtype=np.int64),
@@ -134,6 +134,8 @@ class GymEnv(gym.Env):
         ghosts = [ghostType(i+1) for i in range(self.layout.numGhosts)]
 
         pacman = pm.moduleLoadAgent(PACMAN, False)
+
+
         
         
         if self.render_mode == None:
@@ -182,6 +184,7 @@ class GymEnv(gym.Env):
         return observation, dict()
 
     def step(self, action):
+        info = dict()
 
         #Check if action is in illegal actions
         if self._inv_direction_to_action[action] not in self.game.state.getLegalPacmanActions():          
@@ -209,6 +212,13 @@ class GymEnv(gym.Env):
 
            
             if(self.game.gameOver):
+                if self.game.state.isWin():
+                    info = {"win":True,
+                            "score": self.game.state.getGameScore()}
+                elif self.game.state.isLose():
+                    info = {"win":False,
+                            "score": self.game.state.getGameScore()}
+
                 terminated = True
                 self.gameCount += 1
                 if bool(self.game.state.isWin()): # Keeping track of winning games
@@ -255,7 +265,7 @@ class GymEnv(gym.Env):
 
         reward = self.game.state.getScore() - prevScore
 
-        return observation, reward, terminated, False, dict({"winState": self.gameWin})
+        return observation, reward, terminated, False, info
     
     def render(self):
         self.render_mode = "human"

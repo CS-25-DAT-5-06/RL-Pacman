@@ -1,0 +1,32 @@
+# experiments/configurations/qlearning_medium_smallGrid.yaml
+experiment_name: "qlearning_simple_mediumClassic"
+
+environment:
+  layout: "mediumClassic"
+  rewards:
+    time_penalty: -1
+    eat_food: 10
+    eat_ghost: 200
+    win: 500
+    lose: -500
+    capsule: 10
+
+agent:
+  learning_rate: 0.1
+  discount_factor: 0.99
+  epsilon: 1.0
+  epsilon_decay: 0.995
+  epsilon_min: 0.01
+
+state_abstraction:
+  enabled: true
+  feature_type: "simple"
+
+training:
+  num_episodes: 5000
+
+output:
+  base_dir: "data/experiments/experiment1.5"
+  save_q_table: true
+  save_metrics: true
+  print_interval: 100
