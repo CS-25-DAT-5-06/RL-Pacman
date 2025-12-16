@@ -59,8 +59,6 @@ def evaluate(experiment_dir, num_episodes=10, render=False, delay=0.1):
     )
     
     # Setup Agent
-    # The Naive Q-learning agent shoud suffice for evaluation, since the specialized agents have trick to improve training.
-    # Here we just need an agent that can act upon a pre-trained model/Q-table
     if config["graphAgent"]["type"] == "naive":
         agent = NaiveGraphQLearningAgent(
             action_space_size=4,
